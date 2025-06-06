@@ -157,15 +157,13 @@ JWT_SECRET=your_jwt_secret
 PORT=3000
 ```
 
-## 📄 License
 
-This project is licensed under the ISC License.
+
 
 ## 👥 Authors
 
-- Malick2k3 - Initial work
+- Malick2k3
+- IbrahimaDiba
+- sc235 Ahmeddd00
 
-## 🙏 Acknowledgments
 
-- Thanks to all contributors who have helped shape this project
-- Special thanks to the DAUST community for their support 
