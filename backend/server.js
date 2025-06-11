@@ -3,6 +3,10 @@ const cors = require('cors');
 const mysql = require('mysql2');
 const dotenv = require('dotenv');
 const winston = require('winston');
+<<<<<<< HEAD
+=======
+const routes = require('./src/routes');
+>>>>>>> d348016b6ae3b3d35b4c44ec557a3e8cca377a87
 
 // Load environment variables
 dotenv.config();
@@ -54,11 +58,27 @@ pool.getConnection((err, connection) => {
   connection.release();
 });
 
+<<<<<<< HEAD
 // Basic route for testing
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to DAUST Marketplace API' });
 });
 
+=======
+// Request logging middleware
+app.use((req, res, next) => {
+  logger.info(`${req.method} ${req.url}`, {
+    body: req.body,
+    query: req.query,
+    params: req.params
+  });
+  next();
+});
+
+// API routes
+app.use('/api', routes);
+
+>>>>>>> d348016b6ae3b3d35b4c44ec557a3e8cca377a87
 // Error handling middleware
 app.use((err, req, res, next) => {
   logger.error(err.stack);
