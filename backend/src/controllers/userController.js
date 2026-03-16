@@ -1,124 +1,193 @@
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const db = require('../config/database');
+const { randomUUID } = require('crypto');
+const { pool } = require('../config/database');
 
-// Register a new user
-const register = async (req, res) => {
+const allowedRoles = new Set(['admin', 'manager', 'cashier']);
+
+function serializeUser(user) {
+  return {
+    id: user.id,
+    full_name: user.full_name,
+    email: user.email,
+    role: user.role,
+    is_active: Boolean(user.is_active),
+    created_at: user.created_at,
+    updated_at: user.updated_at
+  };
+}
+
+function normalizeRole(role) {
+  return allowedRoles.has(role) ? role : 'cashier';
+}
+
+async function getProfile(req, res) {
   try {
-    const { username, email, password, full_name, role = 'user' } = req.body;
-
-    // Check if user already exists
-    const [existingUsers] = await db.query(
-      'SELECT * FROM users WHERE email = ? OR username = ?',
-      [email, username]
-    );
-
-    if (existingUsers.length > 0) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
-
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Insert new user
-    const [result] = await db.query(
-      'INSERT INTO users (username, email, password, full_name, role) VALUES (?, ?, ?, ?, ?)',
-      [username, email, hashedPassword, full_name, role]
-    );
-
-    // Generate token
-    const token = jwt.sign(
-      { id: result.insertId, role },
-      process.env.JWT_SECRET || 'your_jwt_secret_key_here',
-      { expiresIn: '1h' }
-    );
-
-    res.status(201).json({
-      message: 'User registered successfully',
-      token,
-      user: {
-        id: result.insertId,
-        username,
-        email,
-        full_name,
-        role
-      }
-    });
-  } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({ message: 'Error registering user' });
-  }
-};
-
-// Login user
-const login = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    // Find user
-    const [users] = await db.query(
-      'SELECT * FROM users WHERE email = ?',
-      [email]
-    );
-
-    if (users.length === 0) {
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
-
-    const user = users[0];
-
-    // Verify password
-    const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) {
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
-
-    // Generate token
-    const token = jwt.sign(
-      { id: user.id, role: user.role },
-      process.env.JWT_SECRET || 'your_jwt_secret_key_here',
-      { expiresIn: '1h' }
-    );
-
-    res.json({
-      message: 'Logged in successfully',
-      token,
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        full_name: user.full_name,
-        role: user.role
-      }
-    });
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ message: 'Error logging in' });
-  }
-};
-
-// Get user profile
-const getProfile = async (req, res) => {
-  try {
-    const [users] = await db.query(
-      'SELECT id, username, email, full_name, role, created_at FROM users WHERE id = ?',
-      [req.user.id]
-    );
+    const [users] = await pool.query('SELECT * FROM users WHERE id = ? LIMIT 1', [req.user.id]);
 
     if (users.length === 0) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    res.json(users[0]);
+    return res.json(serializeUser(users[0]));
   } catch (error) {
     console.error('Get profile error:', error);
-    res.status(500).json({ message: 'Error fetching profile' });
+    return res.status(500).json({ message: 'Unable to load the user profile' });
   }
-};
+}
+
+async function listUsers(req, res) {
+  try {
+    const [users] = await pool.query(
+      `SELECT id, full_name, email, role, is_active, created_at, updated_at
+       FROM users
+       ORDER BY full_name`
+    );
+
+    return res.json(users.map(serializeUser));
+  } catch (error) {
+    console.error('List users error:', error);
+    return res.status(500).json({ message: 'Unable to load users' });
+  }
+}
+
+async function getUserById(req, res) {
+  try {
+    const [users] = await pool.query('SELECT * FROM users WHERE id = ? LIMIT 1', [req.params.id]);
+
+    if (users.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    return res.json(serializeUser(users[0]));
+  } catch (error) {
+    console.error('Get user error:', error);
+    return res.status(500).json({ message: 'Unable to load the user' });
+  }
+}
+
+async function createUser(req, res) {
+  try {
+    const fullName = String(req.body.full_name || '').trim();
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const pin = String(req.body.pin || '').trim();
+    const role = normalizeRole(req.body.role);
+
+    if (!fullName || !email || !/^\d{4}$/.test(pin)) {
+      return res.status(400).json({
+        message: 'Full name, email, and a 4-digit PIN are required'
+      });
+    }
+
+    const [existingUsers] = await pool.query(
+      'SELECT id FROM users WHERE email = ? LIMIT 1',
+      [email]
+    );
+
+    if (existingUsers.length > 0) {
+      return res.status(409).json({ message: 'A user with that email already exists' });
+    }
+
+    const id = randomUUID();
+    const pinHash = await bcrypt.hash(pin, 10);
+
+    await pool.query(
+      `INSERT INTO users (id, full_name, email, pin_hash, role, is_active)
+       VALUES (?, ?, ?, ?, ?, TRUE)`,
+      [id, fullName, email, pinHash, role]
+    );
+
+    const [users] = await pool.query('SELECT * FROM users WHERE id = ?', [id]);
+    return res.status(201).json(serializeUser(users[0]));
+  } catch (error) {
+    console.error('Create user error:', error);
+    return res.status(500).json({ message: 'Unable to create the user' });
+  }
+}
+
+async function updateUser(req, res) {
+  try {
+    const [users] = await pool.query('SELECT * FROM users WHERE id = ? LIMIT 1', [req.params.id]);
+
+    if (users.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const currentUser = users[0];
+    const fullName = String(req.body.full_name || currentUser.full_name).trim();
+    const email = String(req.body.email || currentUser.email).trim().toLowerCase();
+    const role = req.body.role ? normalizeRole(req.body.role) : currentUser.role;
+    const isActive = req.body.is_active === undefined ? currentUser.is_active : Boolean(req.body.is_active);
+
+    const [existingUsers] = await pool.query(
+      'SELECT id FROM users WHERE email = ? AND id != ? LIMIT 1',
+      [email, req.params.id]
+    );
+
+    if (existingUsers.length > 0) {
+      return res.status(409).json({ message: 'A user with that email already exists' });
+    }
+
+    let pinHash = currentUser.pin_hash;
+    if (req.body.pin) {
+      const nextPin = String(req.body.pin).trim();
+      if (!/^\d{4}$/.test(nextPin)) {
+        return res.status(400).json({ message: 'PIN must be a 4-digit number' });
+      }
+      pinHash = await bcrypt.hash(nextPin, 10);
+    }
+
+    await pool.query(
+      `UPDATE users
+       SET full_name = ?, email = ?, pin_hash = ?, role = ?, is_active = ?
+       WHERE id = ?`,
+      [fullName, email, pinHash, role, isActive, req.params.id]
+    );
+
+    const [updatedUsers] = await pool.query('SELECT * FROM users WHERE id = ?', [req.params.id]);
+    return res.json(serializeUser(updatedUsers[0]));
+  } catch (error) {
+    console.error('Update user error:', error);
+    return res.status(500).json({ message: 'Unable to update the user' });
+  }
+}
+
+async function deleteUser(req, res) {
+  try {
+    const [users] = await pool.query('SELECT * FROM users WHERE id = ? LIMIT 1', [req.params.id]);
+
+    if (users.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (req.user.id === req.params.id) {
+      return res.status(400).json({ message: 'You cannot delete your own account' });
+    }
+
+    if (users[0].role === 'admin') {
+      const [admins] = await pool.query(
+        `SELECT COUNT(*) AS count
+         FROM users
+         WHERE role = 'admin' AND is_active = TRUE`
+      );
+
+      if (admins[0].count <= 1) {
+        return res.status(400).json({ message: 'You cannot delete the last active admin' });
+      }
+    }
+
+    await pool.query('DELETE FROM users WHERE id = ?', [req.params.id]);
+    return res.status(204).send();
+  } catch (error) {
+    console.error('Delete user error:', error);
+    return res.status(500).json({ message: 'Unable to delete the user' });
+  }
+}
 
 module.exports = {
-  register,
-  login,
-  getProfile
-}; 
+  getProfile,
+  listUsers,
+  getUserById,
+  createUser,
+  updateUser,
+  deleteUser
+};

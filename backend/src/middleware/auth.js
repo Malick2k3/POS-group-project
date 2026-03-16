@@ -1,31 +1,52 @@
 const jwt = require('jsonwebtoken');
-const dotenv = require('dotenv');
 
-dotenv.config();
+function extractToken(req) {
+  const header = req.header('Authorization');
 
-const auth = (req, res, next) => {
-  try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    
-    if (!token) {
-      return res.status(401).json({ message: 'No authentication token, access denied' });
-    }
-
-    const verified = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret_key_here');
-    req.user = verified;
-    next();
-  } catch (err) {
-    res.status(401).json({ message: 'Token verification failed, authorization denied' });
+  if (!header || !header.startsWith('Bearer ')) {
+    return null;
   }
-};
 
-const checkRole = (roles) => {
-  return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ message: 'Access denied: insufficient permissions' });
+  return header.slice(7).trim();
+}
+
+function verifyToken(req, res, next) {
+  try {
+    const token = extractToken(req);
+
+    if (!token) {
+      return res.status(401).json({ message: 'Authentication token is required' });
     }
-    next();
-  };
-};
 
-module.exports = { auth, checkRole }; 
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || 'development-pos-secret-change-me'
+    );
+
+    req.user = {
+      id: decoded.id || decoded.userId,
+      role: decoded.role,
+      email: decoded.email
+    };
+
+    return next();
+  } catch (error) {
+    return res.status(401).json({ message: 'Invalid or expired authentication token' });
+  }
+}
+
+function checkRole(roles) {
+  return (req, res, next) => {
+    if (!req.user || !roles.includes(req.user.role)) {
+      return res.status(403).json({ message: 'You do not have access to this resource' });
+    }
+
+    return next();
+  };
+}
+
+module.exports = {
+  verifyToken,
+  auth: verifyToken,
+  checkRole
+};

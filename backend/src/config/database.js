@@ -1,40 +1,28 @@
-const mysql = require('mysql2');
 const dotenv = require('dotenv');
+const mysql = require('mysql2/promise');
 
 dotenv.config();
 
-// Create the connection pool
-const pool = mysql.createPool({
-  host: '127.0.0.1',
-  port: 3306,
-  user: 'root',
-  password: 'neymarjr10',
-  database: 'daust_marketplace',
+const databaseConfig = {
+  host: process.env.DB_HOST || '127.0.0.1',
+  port: Number(process.env.DB_PORT || 3306),
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'modern_pos',
   waitForConnections: true,
-  connectionLimit: 10,
+  connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 10),
   queueLimit: 0
-});
+};
 
-// Test the connection
-pool.getConnection((err, connection) => {
-  if (err) {
-    console.error('Error connecting to the database:', err.message);
-    if (err.code === 'ECONNREFUSED') {
-      console.error('\nMySQL server is not running. Please follow these steps:');
-      console.error('1. Open Command Prompt as Administrator');
-      console.error('2. Run these commands:');
-      console.error('   net stop MySQL80');
-      console.error('   net start MySQL80');
-      console.error('3. If MySQL is not installed, download and install from:');
-      console.error('   https://dev.mysql.com/downloads/installer/');
-    }
-    process.exit(1);
-  }
-  console.log('Successfully connected to MySQL database');
+const pool = mysql.createPool(databaseConfig);
+
+async function testConnection() {
+  const connection = await pool.getConnection();
   connection.release();
-});
+}
 
-// Convert pool to use promises
-const promisePool = pool.promise();
-
-module.exports = promisePool; 
+module.exports = {
+  pool,
+  testConnection,
+  databaseConfig
+};

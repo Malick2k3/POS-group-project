@@ -1,89 +1,122 @@
 const express = require('express');
-const router = express.Router();
+const { randomUUID } = require('crypto');
 const { pool } = require('../config/database');
 const { verifyToken, checkRole } = require('../middleware/auth');
 
-// Get all categories
+const router = express.Router();
+
 router.get('/', async (req, res) => {
   try {
-    const [categories] = await pool.query('SELECT * FROM categories ORDER BY name');
-    res.json(categories);
+    const [categories] = await pool.query(
+      'SELECT * FROM categories ORDER BY name ASC'
+    );
+
+    return res.json(categories);
   } catch (error) {
     console.error('Get categories error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    return res.status(500).json({ message: 'Unable to load categories' });
   }
 });
 
-// Create category
 router.post('/', verifyToken, checkRole(['admin']), async (req, res) => {
   try {
-    const { name, description } = req.body;
+    const name = String(req.body.name || '').trim();
+    const description = req.body.description ?? null;
+    const color = String(req.body.color || '#1f6feb').trim();
 
     if (!name) {
       return res.status(400).json({ message: 'Category name is required' });
     }
 
-    const [result] = await pool.query(
-      'INSERT INTO categories (id, name, description) VALUES (UUID(), ?, ?)',
-      [name, description]
+    const [existingCategories] = await pool.query(
+      'SELECT id FROM categories WHERE name = ? LIMIT 1',
+      [name]
     );
 
-    res.status(201).json({
-      message: 'Category created successfully',
-      id: result.insertId
-    });
+    if (existingCategories.length > 0) {
+      return res.status(409).json({ message: 'A category with that name already exists' });
+    }
+
+    const id = randomUUID();
+    await pool.query(
+      'INSERT INTO categories (id, name, description, color) VALUES (?, ?, ?, ?)',
+      [id, name, description, color]
+    );
+
+    const [categories] = await pool.query('SELECT * FROM categories WHERE id = ?', [id]);
+    return res.status(201).json(categories[0]);
   } catch (error) {
     console.error('Create category error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    return res.status(500).json({ message: 'Unable to create the category' });
   }
 });
 
-// Update category
 router.put('/:id', verifyToken, checkRole(['admin']), async (req, res) => {
   try {
-    const { name, description } = req.body;
-    const categoryId = req.params.id;
+    const [categories] = await pool.query(
+      'SELECT * FROM categories WHERE id = ? LIMIT 1',
+      [req.params.id]
+    );
 
-    if (!name) {
-      return res.status(400).json({ message: 'Category name is required' });
+    if (categories.length === 0) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+
+    const current = categories[0];
+    const name = String(req.body.name || current.name).trim();
+    const description = req.body.description ?? current.description;
+    const color = String(req.body.color || current.color || '#1f6feb').trim();
+
+    const [existingCategories] = await pool.query(
+      'SELECT id FROM categories WHERE name = ? AND id != ? LIMIT 1',
+      [name, req.params.id]
+    );
+
+    if (existingCategories.length > 0) {
+      return res.status(409).json({ message: 'A category with that name already exists' });
     }
 
     await pool.query(
-      'UPDATE categories SET name = ?, description = ? WHERE id = ?',
-      [name, description, categoryId]
+      'UPDATE categories SET name = ?, description = ?, color = ? WHERE id = ?',
+      [name, description, color, req.params.id]
     );
 
-    res.json({ message: 'Category updated successfully' });
+    const [updatedCategories] = await pool.query(
+      'SELECT * FROM categories WHERE id = ?',
+      [req.params.id]
+    );
+
+    return res.json(updatedCategories[0]);
   } catch (error) {
     console.error('Update category error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    return res.status(500).json({ message: 'Unable to update the category' });
   }
 });
 
-// Delete category
 router.delete('/:id', verifyToken, checkRole(['admin']), async (req, res) => {
   try {
-    const categoryId = req.params.id;
-
-    // Check if category is in use
     const [products] = await pool.query(
-      'SELECT COUNT(*) as count FROM products WHERE category_id = ?',
-      [categoryId]
+      'SELECT COUNT(*) AS count FROM products WHERE category_id = ?',
+      [req.params.id]
     );
 
     if (products[0].count > 0) {
       return res.status(400).json({
-        message: 'Cannot delete category that has associated products'
+        message: 'Cannot delete a category that still has products assigned'
       });
     }
 
-    await pool.query('DELETE FROM categories WHERE id = ?', [categoryId]);
+    const [result] = await pool.query('DELETE FROM categories WHERE id = ?', [req.params.id]);
 
-    res.json({ message: 'Category deleted successfully' });
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+
+    return res.status(204).send();
   } catch (error) {
     console.error('Delete category error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    return res.status(500).json({ message: 'Unable to delete the category' });
   }
 });
 
-module.exports = router; 
+module.exports = router;

@@ -1,96 +1,96 @@
--- Create database if not exists
-CREATE DATABASE IF NOT EXISTS daust_marketplace;
-USE daust_marketplace;
+CREATE DATABASE IF NOT EXISTS modern_pos;
+USE modern_pos;
 
--- Users table
 CREATE TABLE IF NOT EXISTS users (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    username VARCHAR(50) UNIQUE NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
+    id CHAR(36) PRIMARY KEY,
     full_name VARCHAR(100) NOT NULL,
-    role ENUM('user', 'seller', 'admin') DEFAULT 'user',
+    email VARCHAR(120) NOT NULL UNIQUE,
+    pin_hash VARCHAR(255) NOT NULL,
+    role ENUM('admin', 'manager', 'cashier') NOT NULL DEFAULT 'cashier',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Categories table
 CREATE TABLE IF NOT EXISTS categories (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(50) NOT NULL,
+    id CHAR(36) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    color VARCHAR(20) NOT NULL DEFAULT '#3b82f6',
     description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Products table
 CREATE TABLE IF NOT EXISTS products (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    seller_id INT NOT NULL,
-    category_id INT NOT NULL,
-    name VARCHAR(100) NOT NULL,
+    id CHAR(36) PRIMARY KEY,
+    name VARCHAR(120) NOT NULL,
     description TEXT,
     price DECIMAL(10, 2) NOT NULL,
     stock_quantity INT NOT NULL DEFAULT 0,
+    category_id CHAR(36),
+    barcode VARCHAR(64) UNIQUE,
     image_url VARCHAR(255),
-    status ENUM('active', 'inactive', 'sold_out') DEFAULT 'active',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by CHAR(36),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (seller_id) REFERENCES users(id),
-    FOREIGN KEY (category_id) REFERENCES categories(id)
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
--- Orders table
-CREATE TABLE IF NOT EXISTS orders (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT NOT NULL,
+CREATE TABLE IF NOT EXISTS sales (
+    id CHAR(36) PRIMARY KEY,
+    cashier_id CHAR(36) NOT NULL,
+    customer_name VARCHAR(120),
+    subtotal DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    tax DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    discount DECIMAL(10, 2) NOT NULL DEFAULT 0,
     total_amount DECIMAL(10, 2) NOT NULL,
-    status ENUM('pending', 'processing', 'shipped', 'delivered', 'cancelled') DEFAULT 'pending',
-    shipping_address TEXT NOT NULL,
+    payment_method ENUM('cash', 'credit', 'debit', 'mobile') NOT NULL,
+    status ENUM('completed', 'refunded', 'voided') NOT NULL DEFAULT 'completed',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (cashier_id) REFERENCES users(id)
 );
 
--- Order items table
-CREATE TABLE IF NOT EXISTS order_items (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    order_id INT NOT NULL,
-    product_id INT NOT NULL,
+CREATE TABLE IF NOT EXISTS sale_items (
+    id CHAR(36) PRIMARY KEY,
+    sale_id CHAR(36) NOT NULL,
+    product_id CHAR(36) NOT NULL,
     quantity INT NOT NULL,
-    price_at_time DECIMAL(10, 2) NOT NULL,
+    unit_price DECIMAL(10, 2) NOT NULL,
+    total_price DECIMAL(10, 2) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (order_id) REFERENCES orders(id),
+    FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
--- Reviews table
-CREATE TABLE IF NOT EXISTS reviews (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT NOT NULL,
-    product_id INT NOT NULL,
-    rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
-    comment TEXT,
+CREATE TABLE IF NOT EXISTS stock_movements (
+    id CHAR(36) PRIMARY KEY,
+    product_id CHAR(36) NOT NULL,
+    quantity INT NOT NULL,
+    movement_type ENUM('in', 'out') NOT NULL,
+    reference_type ENUM('restock', 'sale', 'adjustment') NOT NULL,
+    reference_id CHAR(36),
+    user_id CHAR(36),
+    notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (product_id) REFERENCES products(id)
+    FOREIGN KEY (product_id) REFERENCES products(id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
--- Cart table
-CREATE TABLE IF NOT EXISTS cart (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT NOT NULL,
-    product_id INT NOT NULL,
-    quantity INT NOT NULL DEFAULT 1,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (product_id) REFERENCES products(id)
-);
+INSERT INTO categories (id, name, color, description)
+SELECT 'cat-electronics', 'Electronics', '#3b82f6', 'Devices and accessories'
+WHERE NOT EXISTS (SELECT 1 FROM categories WHERE id = 'cat-electronics');
 
--- Insert some default categories
-INSERT INTO categories (name, description) VALUES
-('Electronics', 'Electronic devices and accessories'),
-('Clothing', 'Fashion and apparel'),
-('Books', 'Books and educational materials'),
-('Home & Living', 'Home decor and furniture'),
-('Sports', 'Sports equipment and accessories'); 
+INSERT INTO categories (id, name, color, description)
+SELECT 'cat-clothing', 'Clothing', '#10b981', 'Wearables and apparel'
+WHERE NOT EXISTS (SELECT 1 FROM categories WHERE id = 'cat-clothing');
+
+INSERT INTO categories (id, name, color, description)
+SELECT 'cat-food', 'Food & Beverages', '#f59e0b', 'Consumable goods'
+WHERE NOT EXISTS (SELECT 1 FROM categories WHERE id = 'cat-food');
+
+INSERT INTO categories (id, name, color, description)
+SELECT 'cat-home', 'Home & Kitchen', '#8b5cf6', 'Home and kitchen items'
+WHERE NOT EXISTS (SELECT 1 FROM categories WHERE id = 'cat-home');

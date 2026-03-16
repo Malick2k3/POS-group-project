@@ -1,13 +1,13 @@
 {
-  "name": "daust-marketplace-backend",
+  "name": "modern-pos-backend",
   "version": "1.0.0",
-  "description": "Backend for DAUST Marketplace",
+  "description": "Backend API for the Modern POS project",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "init-db": "node src/config/init-db.js",
-    "postinstall": "npm run init-db"
+    "check:syntax": "node --check src/server.js"
   },
   "engines": {
     "node": ">=14.0.0"

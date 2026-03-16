@@ -1,83 +1,67 @@
-const mysql = require('mysql2');
+const bcrypt = require('bcryptjs');
 const fs = require('fs').promises;
+const mysql = require('mysql2/promise');
 const path = require('path');
+const { randomUUID } = require('crypto');
 const dotenv = require('dotenv');
 
 dotenv.config();
 
+const connectionConfig = {
+  host: process.env.DB_HOST || '127.0.0.1',
+  port: Number(process.env.DB_PORT || 3306),
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || ''
+};
+
+const defaultAdmin = {
+  fullName: process.env.DEFAULT_ADMIN_NAME || 'Store Admin',
+  email: process.env.DEFAULT_ADMIN_EMAIL || 'admin@modernpos.local',
+  pin: process.env.DEFAULT_ADMIN_PIN || '1234'
+};
+
 async function initializeDatabase() {
   let connection;
+
   try {
-    // Create connection without database
-    connection = mysql.createConnection({
-      host: '127.0.0.1',  // Use IP instead of localhost
-      port: 3306,         // Explicitly specify port
-      user: 'root',
-      password: 'neymarjr10',
-      connectTimeout: 10000 // 10 seconds timeout
-    });
+    connection = await mysql.createConnection(connectionConfig);
 
-    // Test the connection
-    await new Promise((resolve, reject) => {
-      connection.connect((err) => {
-        if (err) {
-          if (err.code === 'ECONNREFUSED') {
-            console.error('\nMySQL server is not running. Please follow these steps:');
-            console.error('1. Open Command Prompt as Administrator');
-            console.error('2. Run these commands:');
-            console.error('   net stop MySQL80');
-            console.error('   net start MySQL80');
-            console.error('3. If MySQL is not installed, download and install from:');
-            console.error('   https://dev.mysql.com/downloads/installer/');
-            reject(err);
-          } else {
-            console.error('Error connecting to MySQL:', err.message);
-            reject(err);
-          }
-          return;
-        }
-        console.log('Connected to MySQL server successfully');
-        resolve();
-      });
-    });
-
-    // Read and execute the SQL file
-    const sqlFile = await fs.readFile(
-      path.join(__dirname, 'database.sql'),
-      'utf8'
-    );
-
-    // Split the SQL file into individual statements
+    const sqlFile = await fs.readFile(path.join(__dirname, 'database.sql'), 'utf8');
     const statements = sqlFile
       .split(';')
-      .filter(statement => statement.trim());
+      .map((statement) => statement.trim())
+      .filter(Boolean);
 
-    // Execute each statement
     for (const statement of statements) {
-      if (statement.trim()) {
-        await new Promise((resolve, reject) => {
-          connection.query(statement, (error, results) => {
-            if (error) {
-              console.error('Error executing statement:', error.message);
-              reject(error);
-              return;
-            }
-            resolve(results);
-          });
-        });
-      }
+      await connection.query(statement);
+    }
+
+    await connection.query(`USE ${process.env.DB_NAME || 'modern_pos'}`);
+
+    const [admins] = await connection.query(
+      'SELECT id FROM users WHERE email = ? LIMIT 1',
+      [defaultAdmin.email]
+    );
+
+    if (admins.length === 0) {
+      const pinHash = await bcrypt.hash(defaultAdmin.pin, 10);
+      await connection.query(
+        `INSERT INTO users (id, full_name, email, pin_hash, role, is_active)
+         VALUES (?, ?, ?, ?, 'admin', TRUE)`,
+        [randomUUID(), defaultAdmin.fullName, defaultAdmin.email, pinHash]
+      );
+      console.log(`Seeded admin user ${defaultAdmin.email}`);
     }
 
     console.log('Database initialized successfully');
   } catch (error) {
     console.error('Error initializing database:', error.message);
-    process.exit(1); // Exit with error code
+    process.exitCode = 1;
   } finally {
-    if (connection && connection.state !== 'disconnected') {
-      connection.end();
+    if (connection) {
+      await connection.end();
     }
   }
 }
 
-// Run the initialization
-initializeDatabase().catch(() => process.exit(1)); 
+initializeDatabase();

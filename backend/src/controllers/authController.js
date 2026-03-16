@@ -1,116 +1,129 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID } = require('crypto');
 const { pool } = require('../config/database');
 
-const login = async (req, res) => {
-  try {
-    const { username, password } = req.body;
+const allowedRoles = new Set(['admin', 'manager', 'cashier']);
 
-    // Validate input
-    if (!username || !password) {
-      return res.status(400).json({ message: 'Username and password are required' });
+function sanitizeRole(role) {
+  return allowedRoles.has(role) ? role : 'cashier';
+}
+
+function buildToken(user) {
+  return jwt.sign(
+    { id: user.id, role: user.role, email: user.email },
+    process.env.JWT_SECRET || 'development-pos-secret-change-me',
+    { expiresIn: '12h' }
+  );
+}
+
+function serializeUser(user) {
+  return {
+    id: user.id,
+    full_name: user.full_name,
+    email: user.email,
+    role: user.role,
+    is_active: Boolean(user.is_active),
+    created_at: user.created_at,
+    updated_at: user.updated_at
+  };
+}
+
+async function login(req, res) {
+  try {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const pin = String(req.body.pin || '').trim();
+
+    if (!email || !pin) {
+      return res.status(400).json({ message: 'Email and PIN are required' });
     }
 
-    // Get user from database
-    const [users] = await pool.query('SELECT * FROM users WHERE username = ?', [username]);
-    
+    const [users] = await pool.query(
+      'SELECT * FROM users WHERE email = ? AND is_active = TRUE LIMIT 1',
+      [email]
+    );
+
     if (users.length === 0) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: 'Invalid email or PIN' });
     }
 
     const user = users[0];
+    const validPin = await bcrypt.compare(pin, user.pin_hash);
 
-    // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.password);
-    
-    if (!isValidPassword) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+    if (!validPin) {
+      return res.status(401).json({ message: 'Invalid email or PIN' });
     }
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { userId: user.id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-
-    // Return user data and token
-    res.json({
-      token,
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        role: user.role
-      }
+    return res.json({
+      token: buildToken(user),
+      user: serializeUser(user)
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    return res.status(500).json({ message: 'Unable to log in right now' });
   }
-};
+}
 
-const register = async (req, res) => {
+async function register(req, res) {
   try {
-    const { username, email, password, role } = req.body;
+    const fullName = String(req.body.full_name || '').trim();
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const pin = String(req.body.pin || '').trim();
+    const role = sanitizeRole(req.body.role);
 
-    // Validate input
-    if (!username || !email || !password) {
-      return res.status(400).json({ message: 'All fields are required' });
+    if (!fullName || !email || !/^\d{4}$/.test(pin)) {
+      return res.status(400).json({
+        message: 'Full name, email, and a 4-digit PIN are required'
+      });
     }
 
-    // Check if username or email already exists
     const [existingUsers] = await pool.query(
-      'SELECT * FROM users WHERE username = ? OR email = ?',
-      [username, email]
+      'SELECT id FROM users WHERE email = ? LIMIT 1',
+      [email]
     );
 
     if (existingUsers.length > 0) {
-      return res.status(400).json({ message: 'Username or email already exists' });
+      return res.status(409).json({ message: 'A user with that email already exists' });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const id = randomUUID();
+    const pinHash = await bcrypt.hash(pin, 10);
 
-    // Create user
-    const userId = uuidv4();
     await pool.query(
-      'INSERT INTO users (id, username, email, password, role) VALUES (?, ?, ?, ?, ?)',
-      [userId, username, email, hashedPassword, role || 'cashier']
+      `INSERT INTO users (id, full_name, email, pin_hash, role, is_active)
+       VALUES (?, ?, ?, ?, ?, TRUE)`,
+      [id, fullName, email, pinHash, role]
     );
 
-    res.status(201).json({ message: 'User registered successfully' });
-  } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
+    const [users] = await pool.query('SELECT * FROM users WHERE id = ?', [id]);
 
-const getCurrentUser = async (req, res) => {
+    return res.status(201).json({
+      token: buildToken(users[0]),
+      user: serializeUser(users[0])
+    });
+  } catch (error) {
+    console.error('Register error:', error);
+    return res.status(500).json({ message: 'Unable to register right now' });
+  }
+}
+
+async function getCurrentUser(req, res) {
   try {
-    const [users] = await pool.query('SELECT * FROM users WHERE id = ?', [req.user.id]);
-    
+    const [users] = await pool.query('SELECT * FROM users WHERE id = ? LIMIT 1', [req.user.id]);
+
     if (users.length === 0) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    const user = users[0];
-    
-    res.json({
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role
-    });
+    return res.json(serializeUser(users[0]));
   } catch (error) {
     console.error('Get current user error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    return res.status(500).json({ message: 'Unable to load the current user' });
   }
-};
+}
 
 module.exports = {
   login,
   register,
   getCurrentUser
-}; 
+};
