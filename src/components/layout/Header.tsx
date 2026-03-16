@@ -1,17 +1,22 @@
-import React, { useState } from 'react';
-import { Menu, Bell, Search } from 'lucide-react';
-import { useAppContext } from '../../context/AppContext';
+import React, { useMemo, useState } from 'react';
+import { Bell, Menu, Search } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
+import { useAppContext } from '../../context/AppContext';
 
 const Header: React.FC = () => {
-  const { currentUser } = useAppContext();
+  const { currentUser, products } = useAppContext();
   const location = useLocation();
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications] = useState([
-    { id: 1, text: 'Low stock alert: Wireless Headphones', time: '5m ago' },
-    { id: 2, text: 'New sale completed', time: '10m ago' },
-    { id: 3, text: 'Daily report ready', time: '1h ago' }
-  ]);
+
+  const notifications = useMemo(() => {
+    const lowStockProducts = products.filter((product) => product.stockQuantity < 10).slice(0, 3);
+
+    return lowStockProducts.map((product, index) => ({
+      id: index + 1,
+      text: `Low stock alert: ${product.name}`,
+      time: `${product.stockQuantity} left`
+    }));
+  }, [products]);
 
   const getPageTitle = () => {
     switch (location.pathname) {
@@ -26,7 +31,7 @@ const Header: React.FC = () => {
       case '/users':
         return 'User Management';
       default:
-        return 'ModernPOS';
+        return 'Modern POS';
     }
   };
 
@@ -38,21 +43,21 @@ const Header: React.FC = () => {
         </button>
         <h2 className="text-2xl font-semibold text-gray-800">{getPageTitle()}</h2>
       </div>
-      
+
       <div className="flex items-center space-x-6">
         <div className="relative hidden md:block">
           <input
             type="text"
-            placeholder="Search..."
+            placeholder="Search catalog..."
             className="pl-10 pr-4 py-2 bg-white text-gray-800 placeholder-gray-400 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
           />
           <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
         </div>
-        
+
         <div className="relative">
-          <button 
+          <button
             className="text-gray-600 hover:text-blue-600"
-            onClick={() => setShowNotifications(!showNotifications)}
+            onClick={() => setShowNotifications((current) => !current)}
           >
             <Bell size={24} />
             {notifications.length > 0 && (
@@ -61,29 +66,29 @@ const Header: React.FC = () => {
               </span>
             )}
           </button>
-          
+
           {showNotifications && (
             <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg overflow-hidden z-50">
-              <div className="p-3 bg-blue-600 text-white font-medium">
-                Notifications
-              </div>
+              <div className="p-3 bg-blue-600 text-white font-medium">Notifications</div>
               <div className="divide-y divide-gray-100">
-                {notifications.map(notification => (
-                  <div key={notification.id} className="p-3 hover:bg-gray-50">
-                    <p className="text-sm text-gray-800">{notification.text}</p>
-                    <p className="text-xs text-blue-600 mt-1">{notification.time}</p>
-                  </div>
-                ))}
+                {notifications.length > 0 ? (
+                  notifications.map((notification) => (
+                    <div key={notification.id} className="p-3 hover:bg-gray-50">
+                      <p className="text-sm text-gray-800">{notification.text}</p>
+                      <p className="text-xs text-blue-600 mt-1">{notification.time}</p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-3 text-sm text-gray-500">No active alerts</div>
+                )}
               </div>
             </div>
           )}
         </div>
-        
+
         {currentUser && (
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600">
-              {new Date().toLocaleDateString()}
-            </span>
+            <span className="text-sm text-gray-600">{new Date().toLocaleDateString()}</span>
             <div className="flex items-center">
               <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
                 <span className="text-sm font-medium text-blue-600">

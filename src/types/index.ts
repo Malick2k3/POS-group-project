@@ -1,24 +1,21 @@
+export type UserRole = 'admin' | 'manager' | 'cashier';
+export type PaymentMethod = 'cash' | 'credit' | 'debit' | 'mobile';
+
 export interface Product {
   id: string;
   name: string;
   price: number;
   category: string;
+  categoryId?: string | null;
+  categoryColor?: string;
   description: string;
   imageUrl?: string;
   stockQuantity: number;
   barcode?: string;
-  audio?: string;
-  transcription?: string;
-  transcriptionSalesCount?: number;
+  isActive?: boolean;
   createdAt: string;
   updatedAt: string;
-  audioNotes?: {
-    timestamp: string;
-    content: string;
-  }[];
 }
-
-
 
 export interface CartItem {
   product: Product;
@@ -35,26 +32,42 @@ export interface Sale {
   total: number;
   paymentMethod: PaymentMethod;
   cashierId: string;
+  cashierName?: string;
   customerName?: string;
   createdAt: string;
-  audioNotes?: string;
-  transcription?: string;
+  status?: 'completed' | 'refunded' | 'voided';
 }
 
 export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'cashier';
-  pin: string;
+  role: UserRole;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
-
-export type PaymentMethod = 'cash' | 'credit' | 'debit' | 'mobile';
 
 export interface Category {
   id: string;
   name: string;
   color: string;
+  description?: string;
+}
+
+export interface SalesReportSummary {
+  saleDate: string;
+  paymentMethod: PaymentMethod;
+  totalSales: number;
+  totalRevenue: number;
+}
+
+export interface SalesReportTopProduct {
+  id: string;
+  name: string;
+  barcode?: string;
+  totalQuantity: number;
+  totalRevenue: number;
 }
 
 export interface Report {
@@ -65,6 +78,9 @@ export interface Report {
     start: string;
     end: string;
   };
-  data: any;
+  data: {
+    summary: SalesReportSummary[];
+    topProducts: SalesReportTopProduct[];
+  };
   createdAt: string;
 }

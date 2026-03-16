@@ -91,13 +91,13 @@ export const sampleUsers: User[] = [
     name: 'Admin User',
     email: 'admin@example.com',
     role: 'admin',
-    pin: '1234',
+    isActive: true,
   },
   {
     id: uuidv4(),
     name: 'Cashier 1',
     email: 'cashier1@example.com',
     role: 'cashier',
-    pin: '5678',
+    isActive: true,
   },
 ];

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Save } from 'lucide-react';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
@@ -11,106 +11,129 @@ interface ProductFormProps {
 
 const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
   const { products, categories, addProduct, updateProduct } = useAppContext();
-  
   const [formData, setFormData] = useState({
     name: '',
     price: '',
-    category: '',
+    categoryId: '',
     description: '',
     imageUrl: '',
     stockQuantity: '',
-    barcode: '',
-    transcription: '',
+    barcode: ''
   });
-  
   const [errors, setErrors] = useState<Record<string, string>>({});
-  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   useEffect(() => {
-    if (productId) {
-      const productToEdit = products.find(p => p.id === productId);
-      if (productToEdit) {
-        setFormData({
-          name: productToEdit.name,
-          price: productToEdit.price.toString(),
-          category: productToEdit.category,
-          description: productToEdit.description,
-          imageUrl: productToEdit.imageUrl || '',
-          stockQuantity: productToEdit.stockQuantity.toString(),
-          barcode: productToEdit.barcode || '',
-          transcription: productToEdit.transcription || '',
-        });
-      }
+    if (!productId) {
+      return;
     }
+
+    const productToEdit = products.find((product) => product.id === productId);
+    if (!productToEdit) {
+      return;
+    }
+
+    setFormData({
+      name: productToEdit.name,
+      price: productToEdit.price.toString(),
+      categoryId: productToEdit.categoryId || '',
+      description: productToEdit.description,
+      imageUrl: productToEdit.imageUrl || '',
+      stockQuantity: productToEdit.stockQuantity.toString(),
+      barcode: productToEdit.barcode || ''
+    });
   }, [productId, products]);
-  
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
+
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = event.target;
+    setFormData((current) => ({ ...current, [name]: value }));
+
     if (errors[name]) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
+      setErrors((current) => {
+        const nextErrors = { ...current };
+        delete nextErrors[name];
+        return nextErrors;
       });
     }
   };
-  
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-    
-    if (!formData.name.trim()) newErrors.name = 'Product name is required';
+
+  const validateForm = () => {
+    const nextErrors: Record<string, string> = {};
+
+    if (!formData.name.trim()) {
+      nextErrors.name = 'Product name is required';
+    }
+
     if (!formData.price.trim()) {
-      newErrors.price = 'Price is required';
-    } else if (isNaN(Number(formData.price)) || Number(formData.price) <= 0) {
-      newErrors.price = 'Price must be a positive number';
+      nextErrors.price = 'Price is required';
+    } else if (Number.isNaN(Number(formData.price)) || Number(formData.price) <= 0) {
+      nextErrors.price = 'Price must be a positive number';
     }
-    
-    if (!formData.category) newErrors.category = 'Category is required';
-    
+
+    if (!formData.categoryId) {
+      nextErrors.categoryId = 'Category is required';
+    }
+
     if (!formData.stockQuantity.trim()) {
-      newErrors.stockQuantity = 'Quantity is required';
-    } else if (isNaN(Number(formData.stockQuantity)) || Number(formData.stockQuantity) < 0) {
-      newErrors.stockQuantity = 'Quantity must be a non-negative number';
+      nextErrors.stockQuantity = 'Quantity is required';
+    } else if (Number.isNaN(Number(formData.stockQuantity)) || Number(formData.stockQuantity) < 0) {
+      nextErrors.stockQuantity = 'Quantity must be a non-negative number';
     }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   };
-  
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
-    
-    const productData = {
-      name: formData.name,
-      price: Number(formData.price),
-      category: formData.category,
-      description: formData.description,
-      imageUrl: formData.imageUrl || undefined,
-      stockQuantity: Number(formData.stockQuantity),
-      barcode: formData.barcode || undefined,
-      transcription: formData.transcription || undefined,
-    };
-    
-    if (productId) {
-      const existingProduct = products.find(p => p.id === productId);
-      if (existingProduct) {
-        updateProduct({
-          ...existingProduct,
-          ...productData,
-        });
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const productData = {
+        name: formData.name.trim(),
+        price: Number(formData.price),
+        categoryId: formData.categoryId,
+        description: formData.description.trim(),
+        imageUrl: formData.imageUrl.trim() || undefined,
+        stockQuantity: Number(formData.stockQuantity),
+        barcode: formData.barcode.trim() || undefined
+      };
+
+      if (productId) {
+        const existingProduct = products.find((product) => product.id === productId);
+        if (existingProduct) {
+          await updateProduct({
+            ...existingProduct,
+            ...productData
+          });
+        }
+      } else {
+        await addProduct(productData);
       }
-    } else {
-      addProduct(productData);
+
+      onSuccess();
+    } catch (error) {
+      setErrors({
+        form: error instanceof Error ? error.message : 'Unable to save the product'
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    onSuccess();
   };
-  
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {errors.form && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {errors.form}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Input
           label="Product Name"
@@ -120,7 +143,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
           error={errors.name}
           required
         />
-        
+
         <Input
           label="Price"
           name="price"
@@ -132,26 +155,26 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
           error={errors.price}
           required
         />
-        
+
         <div className="mb-4">
           <label className="block text-sm font-medium mb-1">Category</label>
           <select
-            name="category"
-            value={formData.category}
+            name="categoryId"
+            value={formData.categoryId}
             onChange={handleChange}
-            className="w-full rounded-md shadow-sm border-gray-600 bg-gray-700 text-white focus:ring-blue-500 focus:border-blue-500"
+            className="w-full rounded-md shadow-sm border border-gray-300 bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500"
             required
           >
             <option value="">Select Category</option>
-            {categories.map(category => (
-              <option key={category.id} value={category.name}>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
                 {category.name}
               </option>
             ))}
           </select>
-          {errors.category && <p className="mt-1 text-sm text-red-600">{errors.category}</p>}
+          {errors.categoryId && <p className="mt-1 text-sm text-red-600">{errors.categoryId}</p>}
         </div>
-        
+
         <Input
           label="Stock Quantity"
           name="stockQuantity"
@@ -162,14 +185,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
           error={errors.stockQuantity}
           required
         />
-        
+
         <Input
           label="Barcode (Optional)"
           name="barcode"
           value={formData.barcode}
           onChange={handleChange}
         />
-        
+
         <Input
           label="Image URL (Optional)"
           name="imageUrl"
@@ -178,35 +201,25 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
           placeholder="https://example.com/image.jpg"
         />
       </div>
-      
+
       <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">
-          Description
-        </label>
+        <label className="block text-sm font-medium mb-1">Description</label>
         <textarea
           name="description"
           value={formData.description}
           onChange={handleChange}
           rows={3}
-          className="w-full rounded-md shadow-sm border-gray-600 bg-gray-700 text-white focus:ring-blue-500 focus:border-blue-500"
+          className="w-full rounded-md shadow-sm border border-gray-300 bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500"
         />
       </div>
-      
+
       <div className="flex justify-end gap-2">
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={onSuccess}
-        >
+        <Button type="button" variant="secondary" onClick={onSuccess}>
           Cancel
         </Button>
-        
-        <Button
-          type="submit"
-          variant="primary"
-          icon={<Save size={18} />}
-        >
-          {productId ? 'Update Product' : 'Save Product'}
+
+        <Button type="submit" variant="primary" icon={<Save size={18} />} disabled={isSubmitting}>
+          {isSubmitting ? 'Saving...' : productId ? 'Update Product' : 'Save Product'}
         </Button>
       </div>
     </form>

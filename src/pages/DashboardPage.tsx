@@ -1,5 +1,5 @@
 import React from 'react';
-import { CreditCard, Package, TrendingUp, Users, Clock, DollarSign, PieChart, BarChart } from 'lucide-react';
+import { CreditCard, Package, TrendingUp, Clock, DollarSign } from 'lucide-react';
 import Card from '../components/ui/Card';
 import { useAppContext } from '../context/AppContext';
 import { formatCurrency } from '../utils/formatters';

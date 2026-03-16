@@ -1,9 +1,8 @@
 import React from 'react';
-import { Trash2, ShoppingBag, CreditCard, AlertCircle, Plus, Minus } from 'lucide-react';
+import { Trash2, ShoppingBag, CreditCard, Plus, Minus } from 'lucide-react';
 import Button from '../ui/Button';
 import { useAppContext } from '../../context/AppContext';
 import { formatCurrency } from '../../utils/formatters';
-import { PaymentMethod } from '../../types';
 
 interface CartProps {
   onCheckout: () => void;
