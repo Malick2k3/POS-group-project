@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const helmet = require('helmet');
 const winston = require('winston');
 const routes = require('./routes');
 const { testConnection } = require('./config/database');
@@ -8,6 +9,10 @@ const { testConnection } = require('./config/database');
 dotenv.config();
 
 const app = express();
+const allowedOrigins = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
@@ -29,12 +34,39 @@ if (process.env.NODE_ENV !== 'production') {
   );
 }
 
+app.disable('x-powered-by');
 app.use(
-  cors({
-    origin: process.env.CORS_ORIGIN || '*'
+  helmet({
+    crossOriginResourcePolicy: false
   })
 );
-app.use(express.json());
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.length === 0 && process.env.NODE_ENV !== 'production') {
+        return callback(null, origin === 'http://localhost:5173');
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error('Origin not allowed by CORS'));
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+  })
+);
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '100kb' }));
+app.use(express.urlencoded({
+  extended: false,
+  limit: process.env.URLENCODED_BODY_LIMIT || '50kb',
+  parameterLimit: Number(process.env.URLENCODED_PARAMETER_LIMIT || 50)
+}));
 
 app.use((req, res, next) => {
   logger.info('request', {
@@ -97,6 +129,13 @@ app.get('/api-docs', (req, res) => {
 
 app.use('/api', routes);
 
+app.use((req, res) => {
+  res.status(404).json({
+    status: 'error',
+    message: 'Resource not found'
+  });
+});
+
 app.use((err, req, res, next) => {
   logger.error('unhandled_error', {
     message: err.message,
@@ -112,6 +151,10 @@ app.use((err, req, res, next) => {
 const PORT = Number(process.env.PORT || 3000);
 
 async function startServer() {
+  if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET must be set in production');
+  }
+
   await testConnection();
 
   app.listen(PORT, () => {

@@ -2,6 +2,7 @@ const express = require('express');
 const { randomUUID } = require('crypto');
 const { pool } = require('../config/database');
 const { verifyToken, checkRole } = require('../middleware/auth');
+const { validateCategoryInput, validateUuidParam } = require('../middleware/validators');
 
 const router = express.Router();
 
@@ -18,7 +19,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/', verifyToken, checkRole(['admin']), async (req, res) => {
+router.post('/', verifyToken, checkRole(['admin']), validateCategoryInput, async (req, res) => {
   try {
     const name = String(req.body.name || '').trim();
     const description = req.body.description ?? null;
@@ -51,7 +52,7 @@ router.post('/', verifyToken, checkRole(['admin']), async (req, res) => {
   }
 });
 
-router.put('/:id', verifyToken, checkRole(['admin']), async (req, res) => {
+router.put('/:id', verifyToken, checkRole(['admin']), validateUuidParam, validateCategoryInput, async (req, res) => {
   try {
     const [categories] = await pool.query(
       'SELECT * FROM categories WHERE id = ? LIMIT 1',
@@ -93,7 +94,7 @@ router.put('/:id', verifyToken, checkRole(['admin']), async (req, res) => {
   }
 });
 
-router.delete('/:id', verifyToken, checkRole(['admin']), async (req, res) => {
+router.delete('/:id', verifyToken, checkRole(['admin']), validateUuidParam, async (req, res) => {
   try {
     const [products] = await pool.query(
       'SELECT COUNT(*) AS count FROM products WHERE category_id = ?',

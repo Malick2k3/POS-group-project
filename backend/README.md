@@ -53,6 +53,11 @@ npm run dev
 - `NODE_ENV`
 - `CORS_ORIGIN`
 - `JWT_SECRET`
+- `AUTH_RATE_LIMIT_WINDOW_MS`
+- `AUTH_RATE_LIMIT_MAX`
+- `JSON_BODY_LIMIT`
+- `URLENCODED_BODY_LIMIT`
+- `URLENCODED_PARAMETER_LIMIT`
 - `DB_HOST`
 - `DB_PORT`
 - `DB_USER`
@@ -82,3 +87,4 @@ npm run dev
 - The backend is modeled for a POS workflow, not a marketplace.
 - PINs are stored as hashes, not plain text.
 - Category and product records use UUIDs so data stays stable across environments.
+- Auth routes are rate-limited and write routes validate request payloads before hitting controllers.
