@@ -1,44 +1,49 @@
 # Modern POS Platform
 
-Modern POS Platform is a full-stack retail point-of-sale application for small stores and growing teams. It combines a React dashboard used by staff on the shop floor with an Express and MySQL backend that handles users, categories, products, checkout, stock updates, and reporting.
+This repository is a full-stack point-of-sale system built for a small retail workflow.
 
-The idea is simple: the frontend helps staff move quickly, while the backend keeps the business data consistent. Think of it like a cashier terminal connected to the store's operating system.
+The frontend is a React dashboard used by staff at the register. The backend is an Express and MySQL API that handles authentication, products, categories, sales, stock updates, and reporting.
 
-## Core Capabilities
+The simplest way to think about it is this:
 
-- One-time initial store setup that creates the first admin account
-- Staff authentication with email and 4-digit PIN
-- Role-aware access for admins, managers, and cashiers
-- Product, category, and inventory management
-- Checkout flow with tax, discount, and payment method handling
-- Sales history and reporting
-- Backend request validation, auth throttling, and hardened API defaults
+- the frontend is the counter
+- the backend is the ledger
 
-## Tech Stack
+One side needs to feel fast for staff. The other side needs to stay strict so sales and stock data do not drift.
 
-### Frontend
+## What the project does
+
+- first-time store setup for the initial admin account
+- staff login with email and 4-digit PIN
+- role-based access for `admin`, `manager`, and `cashier`
+- product and category management
+- inventory-aware checkout
+- sales history and report views
+- barcode scanning and cash drawer utilities in the register flow
+
+## Stack
+
+Frontend
 - React
 - TypeScript
 - Vite
 - Tailwind CSS
 - React Router
 - Chart.js
-- XLSX export utilities
 
-### Backend
+Backend
 - Node.js
 - Express
 - MySQL
-- JWT authentication
+- JWT
 - Helmet
-- Express Rate Limit
 - Express Validator
-- Winston logging
+- Express Rate Limit
 
-## Repository Layout
+## Repository layout
 
 ```text
-POS-group-project/
+.
 |-- backend/
 |   |-- src/
 |   |   |-- config/
@@ -47,7 +52,8 @@ POS-group-project/
 |   |   |-- routes/
 |   |   `-- server.js
 |   |-- .env.example
-|   `-- package.json
+|   |-- package.json
+|   `-- README.md
 |-- docs/
 |   |-- api-reference.md
 |   |-- architecture.md
@@ -57,15 +63,17 @@ POS-group-project/
 |   |-- context/
 |   |-- lib/
 |   |-- pages/
-|   |-- types/
-|   `-- App.tsx
+|   `-- types/
+|-- .github/workflows/ci.yml
 |-- .env.example
 `-- package.json
 ```
 
-## Quick Start
+## Local setup
 
 ### 1. Install dependencies
+
+From the project root:
 
 ```bash
 npm install
@@ -74,14 +82,20 @@ npm install --prefix backend
 
 ### 2. Create environment files
 
+Windows:
+
 ```bash
 copy .env.example .env
 copy backend\.env.example backend\.env
 ```
 
-### 3. Update backend configuration
+### 3. Fill in backend values
 
-Set the MySQL credentials and replace the placeholder JWT secret in `backend/.env`.
+Update `backend/.env` with:
+
+- MySQL host, port, user, password, and database name
+- a real `JWT_SECRET`
+- optional default admin values if you want to change the seeded account
 
 ### 4. Initialize the database
 
@@ -89,15 +103,13 @@ Set the MySQL credentials and replace the placeholder JWT secret in `backend/.en
 npm run init-db
 ```
 
-### 5. Run the application
-
-Backend:
+### 5. Start the backend
 
 ```bash
 npm run dev:backend
 ```
 
-Frontend:
+### 6. Start the frontend
 
 ```bash
 npm run dev
@@ -105,18 +117,56 @@ npm run dev
 
 Default local URLs:
 
-- Frontend: `http://localhost:5173`
-- Backend API: `http://localhost:3000`
-- API docs JSON: `http://localhost:3000/api-docs`
+- frontend: `http://localhost:5173`
+- backend: `http://localhost:3000`
+- health check: `http://localhost:3000/api/health`
 
-## Verification Checklist
+## Notes before you run it
 
-Use the full checklist in [docs/verification-checklist.md](docs/verification-checklist.md). At minimum:
+- The frontend build expects local frontend dependencies to be installed. If `tsc` is not found, the root `npm install` step did not complete yet.
+- `POST /api/auth/register` is only meant for first-time setup. After the first admin exists, new staff accounts should be created by an admin through the app.
+- The current auth model is fine for local development, but a production version should move away from browser-stored bearer tokens to `httpOnly` cookies plus CSRF protection.
 
-1. Start the backend and confirm `GET /api/health` responds successfully.
-2. Seed the database and log in with the default admin account.
-3. Load products, categories, and sales data through the frontend.
-4. Complete a test checkout and confirm the sale appears in reports.
+## Useful scripts
+
+Root:
+
+```bash
+npm run dev
+npm run dev:backend
+npm run build
+npm run check
+npm run init-db
+```
+
+Backend:
+
+```bash
+npm run dev --prefix backend
+npm run init-db --prefix backend
+npm run check:syntax --prefix backend
+```
+
+## What is already in good shape
+
+- one-time admin bootstrap instead of open registration
+- request validation on write routes
+- basic security middleware and auth throttling
+- healthier sales handling around stock checks and duplicate line items
+- cleaner, more consistent frontend than the original classroom-style version
+- CI workflow for frontend build and backend syntax checks
+
+## What is still missing
+
+This project is in a much better state than it started in, but it is not pretending to be finished.
+
+Current gaps:
+
+- no automated backend test suite yet
+- no deployment setup yet
+- no demo screenshots or live instance in the repo yet
+
+That is normal for a student or internship-level project. The important thing is that the core workflow is real and the repo is now structured enough to improve further without rewriting everything.
 
 ## Documentation
 
@@ -125,12 +175,26 @@ Use the full checklist in [docs/verification-checklist.md](docs/verification-che
 - [Verification checklist](docs/verification-checklist.md)
 - [Backend README](backend/README.md)
 
-## Security Notes
+## Quick manual verification
 
-- The backend uses `helmet`, bounded body sizes, request validation, and auth rate limiting.
-- The frontend currently stores a bearer token in browser storage for local development.
-- A stronger production version would move auth to secure `httpOnly` cookies with CSRF protection.
+If you want to sanity-check the project after setup, this is the shortest useful pass:
 
-## Current Status
+1. Start the backend and confirm `GET /api/health` responds.
+2. Run the database init script.
+3. Open the frontend and sign in with the seeded admin account.
+4. Create or update a product and category.
+5. Add products to the cart and complete a sale.
+6. Confirm the sale appears in the reporting views.
 
-The implementation already covers the main POS workflow. The current focus is on polish, reproducibility, and operational quality so the repository feels like a serious engineering project rather than a class submission.
+## Why this repo exists
+
+This is not trying to be a huge ERP system. The scope is smaller and more practical than that.
+
+The goal is to show a believable POS workflow with:
+
+- real user roles
+- real inventory constraints
+- real checkout behavior
+- a backend that does more than act like a thin CRUD wrapper
+
+That is the kind of line between "school project" and "actual engineering project" that matters most here.
