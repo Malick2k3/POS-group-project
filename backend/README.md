@@ -1,10 +1,10 @@
 # Modern POS Backend
 
-This backend powers a retail point-of-sale system focused on checkout, inventory, team accounts, and sales reporting. Think of it like the shop's engine room: the frontend is what staff sees, and this API is what keeps products, users, and transactions consistent behind the counter.
+This backend powers a retail point-of-sale system focused on checkout, inventory, team accounts, and sales reporting. The frontend is what staff interacts with; this API is the layer that keeps products, users, and transactions consistent behind the counter.
 
 ## What It Handles
 
-- Staff authentication with `email + 4-digit PIN`
+- Staff authentication with email and 4-digit PIN
 - Role-based access for `admin`, `manager`, and `cashier`
 - Product and category management
 - Stock tracking and stock movement history
@@ -47,6 +47,15 @@ npm run init-db
 npm run dev
 ```
 
+## Local Verification
+
+Once the API is running, validate the basics:
+
+- `GET /` returns the service name and status
+- `GET /api/health` responds successfully
+- `GET /api-docs` returns the API index
+- `POST /api/auth/login` works with the seeded default admin account
+
 ## Environment Variables
 
 - `PORT`
@@ -88,3 +97,4 @@ npm run dev
 - PINs are stored as hashes, not plain text.
 - Category and product records use UUIDs so data stays stable across environments.
 - Auth routes are rate-limited and write routes validate request payloads before hitting controllers.
+- The database bootstrap script creates the schema and seeds a default admin if one does not already exist.
