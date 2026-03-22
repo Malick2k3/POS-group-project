@@ -1,9 +1,14 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { BarChart2, Home, LogOut, Package, ShoppingCart, Users } from 'lucide-react';
+import { BarChart2, Home, LogOut, Package, ShoppingCart, Users, X } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 
-const Sidebar: React.FC = () => {
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { logout, currentUser } = useAppContext();
 
   const navItems = [
@@ -21,58 +26,89 @@ const Sidebar: React.FC = () => {
   }
 
   return (
-    <aside className="w-full md:w-64 h-auto md:h-screen md:flex-shrink-0 border-r bg-white flex flex-col">
-      <div className="p-4 flex items-center justify-center border-b">
-        <ShoppingCart className="mr-2 text-blue-600" size={24} />
-        <h1 className="text-xl font-bold text-gray-800">Modern POS</h1>
-      </div>
-
-      {currentUser ? (
-        <>
-          <div className="p-4 border-b">
-            <p className="text-sm text-gray-500">Logged in as</p>
-            <p className="font-medium text-gray-800">{currentUser.name}</p>
-            <p className="text-xs text-gray-500 capitalize">{currentUser.role}</p>
-          </div>
-
-          <nav className="flex-1 p-4 overflow-y-auto">
-            <ul className="space-y-2">
-              {navItems.map((item) => (
-                <li key={item.to}>
-                  <NavLink
-                    to={item.to}
-                    className={({ isActive }) =>
-                      `flex items-center px-4 py-2 rounded-lg transition-colors ${
-                        isActive
-                          ? 'bg-blue-50 text-blue-600'
-                          : 'hover:bg-gray-50 text-gray-600 hover:text-blue-600'
-                      }`
-                    }
-                  >
-                    {item.icon}
-                    <span className="ml-3">{item.label}</span>
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          <div className="p-4 border-t">
-            <button
-              onClick={logout}
-              className="flex items-center w-full px-4 py-2 text-red-500 hover:bg-red-50 rounded-lg"
-            >
-              <LogOut size={20} />
-              <span className="ml-3">Logout</span>
-            </button>
-          </div>
-        </>
-      ) : (
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-gray-500">Please login</p>
-        </div>
+    <>
+      {isOpen && (
+        <button
+          type="button"
+          aria-label="Close navigation"
+          onClick={onClose}
+          className="fixed inset-0 z-30 bg-slate-950/30 md:hidden"
+        />
       )}
-    </aside>
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-slate-200 bg-white transition-transform duration-200 md:static md:w-64 md:translate-x-0 ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-white">
+              <ShoppingCart size={20} />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-900">Modern POS</p>
+              <p className="text-xs text-slate-500">Retail workspace</p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 md:hidden"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {currentUser ? (
+          <>
+            <div className="border-b border-slate-200 px-5 py-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Signed in</p>
+              <p className="mt-2 text-sm font-semibold text-slate-900">{currentUser.name}</p>
+              <p className="text-sm capitalize text-slate-500">{currentUser.role}</p>
+            </div>
+
+            <nav className="flex-1 overflow-y-auto px-4 py-5">
+              <ul className="space-y-2">
+                {navItems.map((item) => (
+                  <li key={item.to}>
+                    <NavLink
+                      to={item.to}
+                      onClick={onClose}
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
+                          isActive
+                            ? 'bg-slate-900 text-white'
+                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        }`
+                      }
+                    >
+                      {item.icon}
+                      <span>{item.label}</span>
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+
+            <div className="border-t border-slate-200 p-4">
+              <button
+                onClick={logout}
+                className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+              >
+                <LogOut size={18} />
+                <span>Logout</span>
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-1 items-center justify-center px-6 text-sm text-slate-500">
+            Please log in
+          </div>
+        )}
+      </aside>
+    </>
   );
 };
 
