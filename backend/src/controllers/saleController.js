@@ -23,6 +23,22 @@ function normalizeReportBoundary(value, boundary) {
   return Number.isNaN(Date.parse(trimmedValue)) ? null : trimmedValue;
 }
 
+function aggregateSaleItems(items) {
+  const itemMap = new Map();
+
+  for (const item of items) {
+    const productId = item.product_id;
+    const quantity = Number(item.quantity);
+    const currentQuantity = itemMap.get(productId) || 0;
+    itemMap.set(productId, currentQuantity + quantity);
+  }
+
+  return Array.from(itemMap.entries()).map(([productId, quantity]) => ({
+    productId,
+    quantity
+  }));
+}
+
 async function createSale(req, res) {
   let connection;
   let transactionStarted = false;
@@ -44,20 +60,21 @@ async function createSale(req, res) {
     await connection.beginTransaction();
     transactionStarted = true;
 
+    const aggregatedItems = aggregateSaleItems(items);
     let subtotal = 0;
     const resolvedItems = [];
-    for (const item of items) {
+    for (const item of aggregatedItems) {
       const [products] = await connection.query(
-        'SELECT id, name, price, stock_quantity FROM products WHERE id = ? LIMIT 1',
-        [item.product_id]
+        'SELECT id, name, price, stock_quantity FROM products WHERE id = ? LIMIT 1 FOR UPDATE',
+        [item.productId]
       );
 
       if (products.length === 0) {
-        throw createHttpError(404, `Product ${item.product_id} was not found`);
+        throw createHttpError(404, `Product ${item.productId} was not found`);
       }
 
       const product = products[0];
-      const quantity = Number(item.quantity);
+      const quantity = item.quantity;
 
       if (product.stock_quantity < quantity) {
         throw createHttpError(409, `Insufficient stock for ${product.name}`);
