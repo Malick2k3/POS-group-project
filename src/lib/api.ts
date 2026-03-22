@@ -111,7 +111,7 @@ function mapUser(user: ApiUser): User {
     name: user.full_name,
     email: user.email,
     role: user.role,
-    isActive: Boolean(user.is_active),
+    isActive: user.is_active !== false,
     createdAt: user.created_at,
     updatedAt: user.updated_at
   };
@@ -138,7 +138,7 @@ function mapProduct(product: ApiProduct): Product {
     categoryColor: product.category_color || undefined,
     barcode: product.barcode || undefined,
     imageUrl: product.image_url || undefined,
-    isActive: product.is_active,
+    isActive: product.is_active !== false,
     createdAt: product.created_at,
     updatedAt: product.updated_at
   };
@@ -289,6 +289,7 @@ export const api = {
     categoryId?: string | null;
     barcode?: string;
     imageUrl?: string;
+    isActive?: boolean;
   }) {
     const created = await request<ApiProduct>('/products', {
       method: 'POST',
@@ -299,7 +300,8 @@ export const api = {
         stock_quantity: product.stockQuantity,
         category_id: product.categoryId || null,
         barcode: product.barcode || null,
-        image_url: product.imageUrl || null
+        image_url: product.imageUrl || null,
+        is_active: product.isActive ?? true
       })
     });
 

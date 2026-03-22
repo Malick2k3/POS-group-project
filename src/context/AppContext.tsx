@@ -10,6 +10,7 @@ interface ProductInput {
   imageUrl?: string;
   stockQuantity: number;
   barcode?: string;
+  isActive?: boolean;
 }
 
 interface UserInput {
@@ -17,6 +18,7 @@ interface UserInput {
   email: string;
   role: UserRole;
   pin: string;
+  isActive?: boolean;
 }
 
 interface AppContextProps {

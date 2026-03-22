@@ -119,6 +119,16 @@ async function updateUser(req, res) {
     const role = req.body.role ? normalizeRole(req.body.role) : currentUser.role;
     const isActive = normalizeBoolean(req.body.is_active, currentUser.is_active);
 
+    if (req.user.id === req.params.id) {
+      if (!isActive) {
+        return res.status(400).json({ message: 'You cannot deactivate your own account' });
+      }
+
+      if (role !== currentUser.role) {
+        return res.status(400).json({ message: 'You cannot change your own role' });
+      }
+    }
+
     const [existingUsers] = await pool.query(
       'SELECT id FROM users WHERE email = ? AND id != ? LIMIT 1',
       [email, req.params.id]
@@ -135,6 +145,21 @@ async function updateUser(req, res) {
         return res.status(400).json({ message: 'PIN must be a 4-digit number' });
       }
       pinHash = await bcrypt.hash(nextPin, 10);
+    }
+
+    if (currentUser.role === 'admin' && (!isActive || role !== 'admin')) {
+      const [admins] = await pool.query(
+        `SELECT COUNT(*) AS count
+         FROM users
+         WHERE role = 'admin' AND is_active = TRUE AND id != ?`,
+        [req.params.id]
+      );
+
+      if (admins[0].count <= 0) {
+        return res.status(400).json({
+          message: 'You cannot remove admin access from the last active admin'
+        });
+      }
     }
 
     await pool.query(

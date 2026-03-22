@@ -73,6 +73,10 @@ const validateUserInput = [
     .optional({ values: 'falsy' })
     .matches(/^\d{4}$/)
     .withMessage('PIN must be exactly 4 digits'),
+  body('is_active')
+    .optional()
+    .isBoolean()
+    .withMessage('Active status must be true or false'),
   validateRequest
 ];
 
@@ -103,6 +107,10 @@ const validateProductInput = [
     .optional({ nullable: true, values: 'falsy' })
     .isURL({ protocols: ['http', 'https'], require_protocol: true })
     .withMessage('Image URL must be a valid http or https URL'),
+  body('is_active')
+    .optional()
+    .isBoolean()
+    .withMessage('Active status must be true or false'),
   validateRequest
 ];
 

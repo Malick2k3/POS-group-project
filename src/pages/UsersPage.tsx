@@ -10,7 +10,8 @@ const emptyForm = {
   name: '',
   email: '',
   role: 'cashier' as UserRole,
-  pin: ''
+  pin: '',
+  isActive: true
 };
 
 const UsersPage: React.FC = () => {
@@ -161,7 +162,8 @@ const UsersPage: React.FC = () => {
                       name: user.name,
                       email: user.email,
                       role: user.role,
-                      pin: ''
+                      pin: '',
+                      isActive: user.isActive
                     });
                     setEditingUserId(user.id);
                     setIsAddEditModalOpen(true);
@@ -230,12 +232,34 @@ const UsersPage: React.FC = () => {
               value={formData.role}
               onChange={(event) => setFormData((current) => ({ ...current, role: event.target.value as UserRole }))}
               className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+              disabled={currentUser.id === editingUserId}
             >
               <option value="cashier">Cashier</option>
               <option value="manager">Manager</option>
               <option value="admin">Administrator</option>
             </select>
           </div>
+
+          {editingUserId && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1">Account Status</label>
+              <select
+                name="isActive"
+                value={formData.isActive ? 'true' : 'false'}
+                onChange={(event) =>
+                  setFormData((current) => ({ ...current, isActive: event.target.value === 'true' }))
+                }
+                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                disabled={currentUser.id === editingUserId}
+              >
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+              </select>
+              {currentUser.id === editingUserId && (
+                <p className="mt-1 text-sm text-gray-500">You cannot deactivate or change the role of your own account.</p>
+              )}
+            </div>
+          )}
 
           <div className="mb-4">
             <label className="block text-sm font-medium mb-1">

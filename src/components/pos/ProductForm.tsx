@@ -18,7 +18,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
     description: '',
     imageUrl: '',
     stockQuantity: '',
-    barcode: ''
+    barcode: '',
+    isActive: true
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,7 +41,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
       description: productToEdit.description,
       imageUrl: productToEdit.imageUrl || '',
       stockQuantity: productToEdit.stockQuantity.toString(),
-      barcode: productToEdit.barcode || ''
+      barcode: productToEdit.barcode || '',
+      isActive: productToEdit.isActive
     });
   }, [productId, products]);
 
@@ -101,7 +103,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
         description: formData.description.trim(),
         imageUrl: formData.imageUrl.trim() || undefined,
         stockQuantity: Number(formData.stockQuantity),
-        barcode: formData.barcode.trim() || undefined
+        barcode: formData.barcode.trim() || undefined,
+        isActive: formData.isActive
       };
 
       if (productId) {
@@ -200,6 +203,21 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
           onChange={handleChange}
           placeholder="https://example.com/image.jpg"
         />
+      </div>
+
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">Availability</label>
+        <select
+          name="isActive"
+          value={formData.isActive ? 'true' : 'false'}
+          onChange={(event) =>
+            setFormData((current) => ({ ...current, isActive: event.target.value === 'true' }))
+          }
+          className="w-full rounded-md shadow-sm border border-gray-300 bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500"
+        >
+          <option value="true">Active and available for sale</option>
+          <option value="false">Inactive and hidden from checkout</option>
+        </select>
       </div>
 
       <div className="mb-4">

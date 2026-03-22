@@ -12,7 +12,7 @@ export interface Product {
   imageUrl?: string;
   stockQuantity: number;
   barcode?: string;
-  isActive?: boolean;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
