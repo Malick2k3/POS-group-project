@@ -7,7 +7,7 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "init-db": "node src/config/init-db.js",
-    "check:syntax": "node --check src/server.js"
+    "check:syntax": "node --check src/server.js && node --check src/routes/index.js && node --check src/controllers/authController.js && node --check src/controllers/productController.js && node --check src/controllers/saleController.js && node --check src/controllers/userController.js && node --check src/middleware/auth.js && node --check src/middleware/security.js && node --check src/middleware/validators.js"
   },
   "engines": {
     "node": ">=14.0.0"

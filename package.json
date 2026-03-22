@@ -8,6 +8,8 @@
     "dev": "vite",
     "dev:backend": "npm run dev --prefix backend",
     "build": "tsc && vite build",
+    "check": "npm run build && npm run check:backend",
+    "check:backend": "npm run check:syntax --prefix backend",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "init-db": "npm run init-db --prefix backend"
