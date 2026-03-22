@@ -48,7 +48,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit }) => {
             variant="primary"
             size="sm"
             onClick={() => addToCart(product, 1)}
-            disabled={product.stockQuantity <= 0}
+            disabled={product.stockQuantity <= 0 || !product.isActive}
             icon={<Plus size={14} />}
             className="flex-1 mr-2"
           >

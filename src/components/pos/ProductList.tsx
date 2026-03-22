@@ -16,6 +16,10 @@ const ProductList: React.FC = () => {
   const canManageProducts = currentUser?.role === 'admin' || currentUser?.role === 'manager';
 
   const filteredProducts = products.filter((product) => {
+    if (!product.isActive) {
+      return false;
+    }
+
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory ? product.categoryId === selectedCategory : true;

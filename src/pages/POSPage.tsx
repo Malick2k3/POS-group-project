@@ -21,8 +21,8 @@ const POSPage: React.FC = () => {
   useHotkeys('ctrl+space', () => setIsCheckoutModalOpen(true), []);
   
   const handleBarcodeDetected = (code: string) => {
-    const product = products.find(p => p.barcode === code);
-    if (product) {
+    const product = products.find((item) => item.barcode === code);
+    if (product && product.isActive && product.stockQuantity > 0) {
       addToCart(product, 1);
     }
   };

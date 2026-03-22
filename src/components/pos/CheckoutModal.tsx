@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CreditCard, DollarSign, Receipt, Smartphone } from 'lucide-react';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
@@ -23,6 +23,17 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
   const tax = subtotal * 0.08;
   const total = subtotal + tax;
+
+  useEffect(() => {
+    if (!isOpen) {
+      setPaymentMethod('cash');
+      setCustomerName('');
+      setCashAmount('');
+      setReceipt(null);
+      setError('');
+      setIsSubmitting(false);
+    }
+  }, [isOpen]);
 
   const handleCheckout = async () => {
     setError('');

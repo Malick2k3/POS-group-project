@@ -60,6 +60,10 @@ function canViewSales(user: User | null) {
   return user?.role === 'admin' || user?.role === 'manager';
 }
 
+function clampCartQuantity(quantity: number, availableStock: number) {
+  return Math.max(0, Math.min(quantity, availableStock));
+}
+
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -152,15 +156,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const addToCart = (product: Product, quantity: number) => {
     setCart((currentCart) => {
+      if (!product.isActive || product.stockQuantity <= 0 || quantity <= 0) {
+        return currentCart;
+      }
+
       const existingItemIndex = currentCart.findIndex((item) => item.product.id === product.id);
+      const safeQuantity = clampCartQuantity(quantity, product.stockQuantity);
 
       if (existingItemIndex === -1) {
-        return [...currentCart, { product, quantity }];
+        return [...currentCart, { product, quantity: safeQuantity }];
       }
 
       return currentCart.map((item, index) =>
         index === existingItemIndex
-          ? { ...item, quantity: item.quantity + quantity }
+          ? {
+              ...item,
+              quantity: clampCartQuantity(item.quantity + safeQuantity, item.product.stockQuantity)
+            }
           : item
       );
     });
@@ -173,7 +185,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
 
       return currentCart.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, quantity } : item
+        itemIndex === index
+          ? {
+              ...item,
+              quantity: clampCartQuantity(quantity, item.product.stockQuantity)
+            }
+          : item
       );
     });
   };
