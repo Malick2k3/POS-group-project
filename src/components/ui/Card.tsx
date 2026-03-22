@@ -1,5 +1,4 @@
 import React, { ReactNode } from 'react';
-import { useAppContext } from '../../context/AppContext';
 
 interface CardProps {
   children: ReactNode;
@@ -9,20 +8,18 @@ interface CardProps {
 }
 
 const Card: React.FC<CardProps> = ({ children, title, className = '', footer }) => {
-  const { darkMode } = useAppContext();
-  
   return (
-    <div className={`rounded-lg shadow-md overflow-hidden ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} ${className}`}>
+    <div className={`overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ${className}`}>
       {title && (
-        <div className={`px-4 py-3 ${darkMode ? 'border-b border-gray-700' : 'border-b border-gray-200'}`}>
-          <h3 className="font-semibold">{title}</h3>
+        <div className="border-b border-slate-200 px-5 py-4">
+          <h3 className="text-sm font-semibold tracking-wide text-slate-900">{title}</h3>
         </div>
       )}
-      <div className="p-4">
+      <div className="p-5">
         {children}
       </div>
       {footer && (
-        <div className={`px-4 py-3 ${darkMode ? 'border-t border-gray-700 bg-gray-900' : 'border-t border-gray-200 bg-gray-50'}`}>
+        <div className="border-t border-slate-200 bg-slate-50 px-5 py-4">
           {footer}
         </div>
       )}
