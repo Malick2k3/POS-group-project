@@ -132,12 +132,12 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {errors.form && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {errors.form}
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Input
           label="Product Name"
           name="name"
@@ -159,13 +159,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
           required
         />
 
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Category</label>
+        <div>
+          <label className="mb-2 block text-sm font-medium text-slate-700">Category</label>
           <select
             name="categoryId"
             value={formData.categoryId}
             onChange={handleChange}
-            className="w-full rounded-md shadow-sm border border-gray-300 bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
             required
           >
             <option value="">Select Category</option>
@@ -205,29 +205,29 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onSuccess }) => {
         />
       </div>
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Availability</label>
+      <div>
+        <label className="mb-2 block text-sm font-medium text-slate-700">Availability</label>
         <select
           name="isActive"
           value={formData.isActive ? 'true' : 'false'}
           onChange={(event) =>
             setFormData((current) => ({ ...current, isActive: event.target.value === 'true' }))
           }
-          className="w-full rounded-md shadow-sm border border-gray-300 bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
         >
           <option value="true">Active and available for sale</option>
           <option value="false">Inactive and hidden from checkout</option>
         </select>
       </div>
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Description</label>
+      <div>
+        <label className="mb-2 block text-sm font-medium text-slate-700">Description</label>
         <textarea
           name="description"
           value={formData.description}
           onChange={handleChange}
           rows={3}
-          className="w-full rounded-md shadow-sm border border-gray-300 bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
         />
       </div>
 

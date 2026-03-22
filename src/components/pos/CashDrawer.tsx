@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { DollarSign, Plus, Minus } from 'lucide-react';
+import { DollarSign, Plus, Minus, Wallet } from 'lucide-react';
 import Button from '../ui/Button';
+import Input from '../ui/Input';
 import { formatCurrency } from '../../utils/formatters';
 
 interface CashDrawerProps {
@@ -33,46 +34,48 @@ const CashDrawer: React.FC<CashDrawerProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-      <div className="bg-gray-800 p-6 rounded-lg shadow-lg max-w-md w-full">
-        <h2 className="text-xl font-bold mb-4 flex items-center">
-          <DollarSign className="mr-2" />
-          Cash Drawer Management
-        </h2>
-
-        <div className="mb-6 p-4 bg-gray-700 rounded-lg">
-          <p className="text-sm text-gray-400">Current Amount</p>
-          <p className="text-3xl font-bold text-green-400">{formatCurrency(drawerAmount)}</p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-lg overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl">
+        <div className="border-b border-slate-200 px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
+              <Wallet size={20} />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight text-slate-900">Cash Drawer</h2>
+              <p className="text-sm text-slate-500">Adjust the current drawer amount for the active session.</p>
+            </div>
+          </div>
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Adjustment Amount
-            </label>
-            <input
-              type="number"
-              value={adjustment}
-              onChange={(e) => setAdjustment(e.target.value)}
-              className="w-full rounded-md border-gray-600 bg-gray-700 text-white"
-              placeholder="Enter amount"
-            />
+        <div className="space-y-5 p-6">
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 px-5 py-5">
+            <p className="text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Current amount</p>
+            <div className="mt-3 flex items-end justify-between gap-4">
+              <p className="text-3xl font-semibold tracking-tight text-slate-900">{formatCurrency(drawerAmount)}</p>
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm">
+                <DollarSign size={20} />
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Reason
-            </label>
-            <input
-              type="text"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className="w-full rounded-md border-gray-600 bg-gray-700 text-white"
-              placeholder="Enter reason for adjustment"
-            />
-          </div>
+          <Input
+            label="Adjustment Amount"
+            type="number"
+            value={adjustment}
+            onChange={(e) => setAdjustment(e.target.value)}
+            placeholder="Enter amount"
+          />
 
-          <div className="flex gap-2">
+          <Input
+            label="Reason"
+            type="text"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Enter reason for adjustment"
+          />
+
+          <div className="flex gap-3">
             <Button
               variant="success"
               className="flex-1"
@@ -93,9 +96,13 @@ const CashDrawer: React.FC<CashDrawerProps> = ({ isOpen, onClose }) => {
             </Button>
           </div>
 
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Adjustments update the local drawer value for this session only.
+          </div>
+
           <Button
             variant="secondary"
-            className="w-full mt-4"
+            className="w-full"
             onClick={onClose}
           >
             Close
