@@ -113,8 +113,9 @@ app.get('/api-docs', (req, res) => {
     message: 'Modern POS API Documentation',
     endpoints: {
       auth: {
+        'GET /api/auth/setup-status': 'Check whether initial store setup is still open',
         'POST /api/auth/login': 'Login with email and 4-digit PIN',
-        'POST /api/auth/register': 'Register a new POS user',
+        'POST /api/auth/register': 'Create the initial store admin account',
         'GET /api/auth/me': 'Get the current authenticated user'
       },
       users: {

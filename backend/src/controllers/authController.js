@@ -3,10 +3,9 @@ const jwt = require('jsonwebtoken');
 const { randomUUID } = require('crypto');
 const { pool } = require('../config/database');
 
-const allowedRoles = new Set(['admin', 'manager', 'cashier']);
-
-function sanitizeRole(role) {
-  return allowedRoles.has(role) ? role : 'cashier';
+async function getUserCount() {
+  const [rows] = await pool.query('SELECT COUNT(*) AS count FROM users');
+  return Number(rows[0]?.count || 0);
 }
 
 function buildToken(user) {
@@ -69,11 +68,18 @@ async function register(req, res) {
     const fullName = String(req.body.full_name || '').trim();
     const email = String(req.body.email || '').trim().toLowerCase();
     const pin = String(req.body.pin || '').trim();
-    const role = sanitizeRole(req.body.role);
 
     if (!fullName || !email || !/^\d{4}$/.test(pin)) {
       return res.status(400).json({
         message: 'Full name, email, and a 4-digit PIN are required'
+      });
+    }
+
+    const userCount = await getUserCount();
+
+    if (userCount > 0) {
+      return res.status(403).json({
+        message: 'Initial setup is already complete. Ask an admin to create your account.'
       });
     }
 
@@ -92,7 +98,7 @@ async function register(req, res) {
     await pool.query(
       `INSERT INTO users (id, full_name, email, pin_hash, role, is_active)
        VALUES (?, ?, ?, ?, ?, TRUE)`,
-      [id, fullName, email, pinHash, role]
+      [id, fullName, email, pinHash, 'admin']
     );
 
     const [users] = await pool.query('SELECT * FROM users WHERE id = ?', [id]);
@@ -122,8 +128,23 @@ async function getCurrentUser(req, res) {
   }
 }
 
+async function getSetupStatus(req, res) {
+  try {
+    const userCount = await getUserCount();
+
+    return res.json({
+      registration_open: userCount === 0,
+      user_count: userCount
+    });
+  } catch (error) {
+    console.error('Get setup status error:', error);
+    return res.status(500).json({ message: 'Unable to determine setup status' });
+  }
+}
+
 module.exports = {
   login,
   register,
-  getCurrentUser
+  getCurrentUser,
+  getSetupStatus
 };

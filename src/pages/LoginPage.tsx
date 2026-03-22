@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Lock, Mail, ShoppingCart, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import { useAppContext } from '../context/AppContext';
+import { api } from '../lib/api';
 
 const LoginPage: React.FC = () => {
   const { login, register, isLoading, authError } = useAppContext();
@@ -16,6 +17,36 @@ const LoginPage: React.FC = () => {
     confirmPin: ''
   });
   const [error, setError] = useState('');
+  const [registrationOpen, setRegistrationOpen] = useState(false);
+  const [isCheckingSetup, setIsCheckingSetup] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadSetupStatus() {
+      try {
+        const status = await api.getSetupStatus();
+
+        if (isMounted) {
+          setRegistrationOpen(status.registration_open);
+        }
+      } catch (setupError) {
+        if (isMounted) {
+          setRegistrationOpen(false);
+        }
+      } finally {
+        if (isMounted) {
+          setIsCheckingSetup(false);
+        }
+      }
+    }
+
+    loadSetupStatus();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -60,8 +91,14 @@ const LoginPage: React.FC = () => {
           </div>
 
           <h2 className="text-xl font-semibold mb-6 text-center text-gray-800">
-            {isRegistering ? 'Create a Staff Account' : 'Sign in to the register'}
+            {isRegistering ? 'Create the Store Admin Account' : 'Sign in to the register'}
           </h2>
+
+          {!isCheckingSetup && !registrationOpen && !isRegistering && (
+            <div className="mb-4 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">
+              Store setup is complete. New staff accounts must be created by an administrator.
+            </div>
+          )}
 
           {(error || authError) && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-md text-sm">
@@ -125,22 +162,24 @@ const LoginPage: React.FC = () => {
               className="w-full bg-gray-800 hover:bg-gray-700"
               disabled={isLoading}
             >
-              {isLoading ? 'Working...' : isRegistering ? 'Create Account' : 'Log In'}
+              {isLoading ? 'Working...' : isRegistering ? 'Create Store Account' : 'Log In'}
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => {
-                setIsRegistering((current) => !current);
-                setError('');
-                setFormData({ name: '', email: '', pin: '', confirmPin: '' });
-              }}
-              className="text-sm text-gray-600 hover:text-gray-800"
-            >
-              {isRegistering ? 'Already have an account? Log in' : 'Need an account? Sign up'}
-            </button>
-          </div>
+          {registrationOpen && (
+            <div className="mt-6 text-center">
+              <button
+                onClick={() => {
+                  setIsRegistering((current) => !current);
+                  setError('');
+                  setFormData({ name: '', email: '', pin: '', confirmPin: '' });
+                }}
+                className="text-sm text-gray-600 hover:text-gray-800"
+              >
+                {isRegistering ? 'Already have an account? Log in' : 'Set up the first store account'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

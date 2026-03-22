@@ -6,6 +6,7 @@ The idea is simple: the frontend helps staff move quickly, while the backend kee
 
 ## Core Capabilities
 
+- One-time initial store setup that creates the first admin account
 - Staff authentication with email and 4-digit PIN
 - Role-aware access for admins, managers, and cashiers
 - Product, category, and inventory management

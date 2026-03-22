@@ -4,6 +4,7 @@ This backend powers a retail point-of-sale system focused on checkout, inventory
 
 ## What It Handles
 
+- Initial one-time store admin setup
 - Staff authentication with email and 4-digit PIN
 - Role-based access for `admin`, `manager`, and `cashier`
 - Product and category management
@@ -80,6 +81,7 @@ Once the API is running, validate the basics:
 
 - `POST /api/auth/login`
 - `POST /api/auth/register`
+- `GET /api/auth/setup-status`
 - `GET /api/auth/me`
 - `GET /api/users/profile`
 - `GET /api/users`
@@ -93,6 +95,7 @@ Once the API is running, validate the basics:
 
 ## Notes
 
+- `POST /api/auth/register` is intentionally limited to first-time setup and creates the initial admin account.
 - The backend is modeled for a POS workflow, not a marketplace.
 - PINs are stored as hashes, not plain text.
 - Category and product records use UUIDs so data stays stable across environments.

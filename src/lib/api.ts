@@ -72,6 +72,11 @@ interface AuthResponse {
   user: ApiUser;
 }
 
+interface SetupStatusResponse {
+  registration_open: boolean;
+  user_count: number;
+}
+
 interface SalesReportResponse {
   summary: Array<{
     sale_date: string;
@@ -246,13 +251,15 @@ export const api = {
       body: JSON.stringify({
         full_name: fullName,
         email,
-        pin,
-        role: 'cashier'
+        pin
       })
     });
 
     setStoredToken(response.token);
     return mapUser(response.user);
+  },
+  async getSetupStatus() {
+    return request<SetupStatusResponse>('/auth/setup-status');
   },
   async getCurrentUser() {
     const user = await request<ApiUser>('/auth/me');
