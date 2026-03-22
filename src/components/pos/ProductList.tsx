@@ -29,7 +29,7 @@ const ProductList: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex flex-col md:flex-row items-center gap-3 mb-4">
+      <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center">
         <div className="relative flex-1 w-full">
           <Input
             type="text"
@@ -45,7 +45,7 @@ const ProductList: React.FC = () => {
           <select
             value={selectedCategory}
             onChange={(event) => setSelectedCategory(event.target.value)}
-            className="rounded-md border border-gray-300 py-2 pl-3 pr-10 text-sm bg-white text-gray-900"
+            className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400"
           >
             <option value="">All Categories</option>
             {categories.map((category) => (
@@ -70,13 +70,13 @@ const ProductList: React.FC = () => {
       </div>
 
       {filteredProducts.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center p-8 text-gray-500">
+        <div className="flex-1 flex flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-slate-200 bg-slate-50 p-8 text-slate-500">
           <Package size={48} className="mb-4 opacity-30" />
           <p className="text-center">No products found</p>
           <p className="text-center text-sm mt-2">Try a different search term or category</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto">
+        <div className="grid grid-cols-1 gap-4 overflow-y-auto sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {filteredProducts.map((product) => (
             <ProductCard
               key={product.id}
