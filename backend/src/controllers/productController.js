@@ -1,13 +1,6 @@
 const { randomUUID } = require('crypto');
 const { pool } = require('../config/database');
-
-function normalizeBoolean(value, fallback = true) {
-  if (value === undefined) {
-    return fallback;
-  }
-
-  return Boolean(value);
-}
+const { normalizeBoolean } = require('../utils/normalizeBoolean');
 
 async function createProduct(req, res) {
   try {
@@ -26,6 +19,17 @@ async function createProduct(req, res) {
       return res.status(400).json({
         message: 'Name, price, and stock quantity are required'
       });
+    }
+
+    if (category_id) {
+      const [categories] = await pool.query(
+        'SELECT id FROM categories WHERE id = ? LIMIT 1',
+        [category_id]
+      );
+
+      if (categories.length === 0) {
+        return res.status(400).json({ message: 'The selected category does not exist' });
+      }
     }
 
     const productId = randomUUID();
@@ -154,6 +158,18 @@ async function updateProduct(req, res) {
     const nextStock = req.body.stock_quantity === undefined
       ? current.stock_quantity
       : Number(req.body.stock_quantity);
+    const nextCategoryId = req.body.category_id ?? current.category_id;
+
+    if (nextCategoryId) {
+      const [categories] = await pool.query(
+        'SELECT id FROM categories WHERE id = ? LIMIT 1',
+        [nextCategoryId]
+      );
+
+      if (categories.length === 0) {
+        return res.status(400).json({ message: 'The selected category does not exist' });
+      }
+    }
 
     await pool.query(
       `UPDATE products
@@ -165,7 +181,7 @@ async function updateProduct(req, res) {
         req.body.description ?? current.description,
         req.body.price ?? current.price,
         nextStock,
-        req.body.category_id ?? current.category_id,
+        nextCategoryId,
         req.body.barcode ?? current.barcode,
         req.body.image_url ?? current.image_url,
         normalizeBoolean(req.body.is_active, current.is_active),

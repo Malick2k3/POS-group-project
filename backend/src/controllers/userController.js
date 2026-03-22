@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const { randomUUID } = require('crypto');
 const { pool } = require('../config/database');
+const { normalizeBoolean } = require('../utils/normalizeBoolean');
 
 const allowedRoles = new Set(['admin', 'manager', 'cashier']);
 
@@ -116,7 +117,7 @@ async function updateUser(req, res) {
     const fullName = String(req.body.full_name || currentUser.full_name).trim();
     const email = String(req.body.email || currentUser.email).trim().toLowerCase();
     const role = req.body.role ? normalizeRole(req.body.role) : currentUser.role;
-    const isActive = req.body.is_active === undefined ? currentUser.is_active : Boolean(req.body.is_active);
+    const isActive = normalizeBoolean(req.body.is_active, currentUser.is_active);
 
     const [existingUsers] = await pool.query(
       'SELECT id FROM users WHERE email = ? AND id != ? LIMIT 1',

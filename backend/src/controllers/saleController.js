@@ -1,8 +1,31 @@
 const { randomUUID } = require('crypto');
 const { pool } = require('../config/database');
 
+function createHttpError(statusCode, message) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+}
+
+function normalizeReportBoundary(value, boundary) {
+  if (typeof value !== 'string' || value.trim() === '') {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmedValue)) {
+    return boundary === 'start'
+      ? `${trimmedValue} 00:00:00`
+      : `${trimmedValue} 23:59:59`;
+  }
+
+  return Number.isNaN(Date.parse(trimmedValue)) ? null : trimmedValue;
+}
+
 async function createSale(req, res) {
-  const connection = await pool.getConnection();
+  let connection;
+  let transactionStarted = false;
 
   try {
     const items = Array.isArray(req.body.items) ? req.body.items : [];
@@ -17,9 +40,12 @@ async function createSale(req, res) {
       return res.status(400).json({ message: 'Payment method is required' });
     }
 
+    connection = await pool.getConnection();
     await connection.beginTransaction();
+    transactionStarted = true;
 
     let subtotal = 0;
+    const resolvedItems = [];
     for (const item of items) {
       const [products] = await connection.query(
         'SELECT id, name, price, stock_quantity FROM products WHERE id = ? LIMIT 1',
@@ -27,19 +53,34 @@ async function createSale(req, res) {
       );
 
       if (products.length === 0) {
-        throw new Error(`Product ${item.product_id} was not found`);
+        throw createHttpError(404, `Product ${item.product_id} was not found`);
       }
 
-      if (products[0].stock_quantity < item.quantity) {
-        throw new Error(`Insufficient stock for ${products[0].name}`);
+      const product = products[0];
+      const quantity = Number(item.quantity);
+
+      if (product.stock_quantity < quantity) {
+        throw createHttpError(409, `Insufficient stock for ${product.name}`);
       }
 
-      subtotal += Number(products[0].price) * Number(item.quantity);
+      const unitPrice = Number(product.price);
+      subtotal += unitPrice * quantity;
+      resolvedItems.push({
+        productId: product.id,
+        productName: product.name,
+        quantity,
+        unitPrice
+      });
     }
 
     const tax = Number(req.body.tax ?? 0);
     const discount = Number(req.body.discount ?? 0);
     const totalAmount = subtotal + tax - discount;
+
+    if (totalAmount < 0) {
+      throw createHttpError(400, 'Discount cannot exceed the sale total');
+    }
+
     const saleId = randomUUID();
 
     await connection.query(
@@ -49,33 +90,24 @@ async function createSale(req, res) {
       [saleId, req.user.id, customerName, subtotal, tax, discount, totalAmount, paymentMethod]
     );
 
-    for (const item of items) {
-      const [products] = await connection.query(
-        'SELECT id, price FROM products WHERE id = ? LIMIT 1',
-        [item.product_id]
-      );
-
-      const product = products[0];
-      const quantity = Number(item.quantity);
-      const unitPrice = Number(product.price);
-
+    for (const item of resolvedItems) {
       await connection.query(
         `INSERT INTO sale_items (
           id, sale_id, product_id, quantity, unit_price, total_price
         ) VALUES (?, ?, ?, ?, ?, ?)`,
-        [randomUUID(), saleId, item.product_id, quantity, unitPrice, unitPrice * quantity]
+        [randomUUID(), saleId, item.productId, item.quantity, item.unitPrice, item.unitPrice * item.quantity]
       );
 
       await connection.query(
         'UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?',
-        [quantity, item.product_id]
+        [item.quantity, item.productId]
       );
 
       await connection.query(
         `INSERT INTO stock_movements (
           id, product_id, quantity, movement_type, reference_type, reference_id, user_id, notes
         ) VALUES (?, ?, ?, 'out', 'sale', ?, ?, ?)`,
-        [randomUUID(), item.product_id, quantity, saleId, req.user.id, 'Sale completed']
+        [randomUUID(), item.productId, item.quantity, saleId, req.user.id, 'Sale completed']
       );
     }
 
@@ -90,11 +122,18 @@ async function createSale(req, res) {
       customer_name: customerName
     });
   } catch (error) {
-    await connection.rollback();
+    if (connection && transactionStarted) {
+      await connection.rollback();
+    }
+
     console.error('Create sale error:', error);
-    return res.status(500).json({ message: error.message || 'Unable to create the sale' });
+    return res.status(error.statusCode || 500).json({
+      message: error.statusCode ? error.message : 'Unable to create the sale'
+    });
   } finally {
-    connection.release();
+    if (connection) {
+      connection.release();
+    }
   }
 }
 
@@ -148,11 +187,17 @@ async function getSaleById(req, res) {
 
 async function getSalesReport(req, res) {
   try {
-    const startDate = req.query.start_date;
-    const endDate = req.query.end_date;
+    const startDate = normalizeReportBoundary(req.query.start_date, 'start');
+    const endDate = normalizeReportBoundary(req.query.end_date, 'end');
 
     if (!startDate || !endDate) {
-      return res.status(400).json({ message: 'Start date and end date are required' });
+      return res.status(400).json({
+        message: 'Start date and end date are required in a valid date format'
+      });
+    }
+
+    if (new Date(startDate) > new Date(endDate)) {
+      return res.status(400).json({ message: 'Start date must be before or equal to end date' });
     }
 
     const [summary] = await pool.query(
