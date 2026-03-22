@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, ReactNode } from 'react';
 import { X } from 'lucide-react';
-import { useAppContext } from '../../context/AppContext';
 
 interface ModalProps {
   isOpen: boolean;
@@ -19,9 +18,8 @@ const Modal: React.FC<ModalProps> = ({
   footer,
   size = 'md',
 }) => {
-  const { darkMode } = useAppContext();
   const modalRef = useRef<HTMLDivElement>(null);
-  
+
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -49,34 +47,34 @@ const Modal: React.FC<ModalProps> = ({
   }, [isOpen, onClose]);
   
   if (!isOpen) return null;
-  
+
   const sizeClasses = {
     sm: 'max-w-md',
     md: 'max-w-lg',
     lg: 'max-w-2xl',
     xl: 'max-w-4xl',
   };
-  
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-      <div 
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
+      <div
         ref={modalRef}
-        className={`w-full ${sizeClasses[size]} ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} rounded-lg shadow-xl transform transition-all duration-300 ease-in-out`}
+        className={`w-full ${sizeClasses[size]} overflow-hidden rounded-3xl border border-slate-200 bg-white text-slate-900 shadow-2xl`}
       >
-        <div className={`px-4 py-3 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex items-center justify-between`}>
-          <h3 className="font-medium">{title}</h3>
-          <button 
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+          <h3 className="text-lg font-semibold tracking-tight">{title}</h3>
+          <button
             onClick={onClose}
-            className={`p-1 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+            className="rounded-full p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
-        <div className="p-4 max-h-[70vh] overflow-y-auto">
+        <div className="max-h-[70vh] overflow-y-auto p-5">
           {children}
         </div>
         {footer && (
-          <div className={`px-4 py-3 border-t ${darkMode ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-gray-50'} flex justify-end gap-2`}>
+          <div className="flex justify-end gap-2 border-t border-slate-200 bg-slate-50 px-5 py-4">
             {footer}
           </div>
         )}

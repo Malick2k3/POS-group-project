@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { DownloadCloud } from 'lucide-react';
+import { BarChart3, DownloadCloud, Receipt, TrendingUp } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -52,88 +52,112 @@ const ReportsPage: React.FC = () => {
     values: report?.data.topProducts.map((product) => product.totalQuantity) || []
   };
 
+  const metrics = [
+    {
+      label: 'Total Sales',
+      value: formatCurrency(totalSales),
+      detail: `${resolvedDateRange.start} to ${resolvedDateRange.end}`,
+      icon: <TrendingUp size={18} />,
+      accent: 'bg-slate-900 text-white'
+    },
+    {
+      label: 'Orders',
+      value: `${totalOrders}`,
+      detail: 'Completed transactions in this range',
+      icon: <Receipt size={18} />,
+      accent: 'bg-emerald-50 text-emerald-700'
+    },
+    {
+      label: 'Average Order',
+      value: formatCurrency(averageOrderValue),
+      detail: 'Revenue per completed sale',
+      icon: <BarChart3 size={18} />,
+      accent: 'bg-blue-50 text-blue-700'
+    }
+  ];
+
   return (
-    <div className="space-y-6 bg-white p-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-blue-600">Reports & Analytics</h1>
-          <p className="text-sm text-gray-500">Live sales performance pulled from the backend API.</p>
-        </div>
+    <div className="space-y-6">
+      <Card className="border-none bg-slate-900 text-white shadow-none">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <p className="text-sm font-medium uppercase tracking-[0.25em] text-slate-400">Reporting</p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight">Sales performance with less noise.</h1>
+            <p className="mt-3 text-sm leading-6 text-slate-300">
+              Compare revenue, order volume, and top-selling products from the live sales feed without digging through
+              raw transactions.
+            </p>
+          </div>
 
-        <div className="flex items-center gap-3">
-          <select
-            value={dateRange}
-            onChange={(event) => setDateRange(event.target.value as 'today' | 'week' | 'month')}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm"
-          >
-            <option value="today">Today</option>
-            <option value="week">Last 7 days</option>
-            <option value="month">Last 30 days</option>
-          </select>
+          <div className="flex flex-wrap items-center gap-3">
+            <select
+              value={dateRange}
+              onChange={(event) => setDateRange(event.target.value as 'today' | 'week' | 'month')}
+              className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none"
+            >
+              <option value="today" className="text-slate-900">Today</option>
+              <option value="week" className="text-slate-900">Last 7 days</option>
+              <option value="month" className="text-slate-900">Last 30 days</option>
+            </select>
 
-          <Button variant="primary" onClick={() => exportSalesToExcel(sales)} icon={<DownloadCloud size={18} />}>
-            Export to Excel
-          </Button>
+            <Button variant="secondary" onClick={() => exportSalesToExcel(sales)} icon={<DownloadCloud size={18} />}>
+              Export
+            </Button>
+          </div>
         </div>
-      </div>
+      </Card>
 
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-blue-200">
-          <div className="p-6">
-            <h3 className="text-lg font-semibold mb-2">Total Sales</h3>
-            <p className="text-3xl font-bold">{formatCurrency(totalSales)}</p>
-            <p className="text-sm mt-2 opacity-90">{resolvedDateRange.start} to {resolvedDateRange.end}</p>
-          </div>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white shadow-blue-200">
-          <div className="p-6">
-            <h3 className="text-lg font-semibold mb-2">Total Orders</h3>
-            <p className="text-3xl font-bold">{totalOrders}</p>
-            <p className="text-sm mt-2 opacity-90">Completed sales in this range</p>
-          </div>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-blue-200">
-          <div className="p-6">
-            <h3 className="text-lg font-semibold mb-2">Average Order Value</h3>
-            <p className="text-3xl font-bold">{formatCurrency(averageOrderValue)}</p>
-            <p className="text-sm mt-2 opacity-90">Revenue per completed sale</p>
-          </div>
-        </Card>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {metrics.map((metric) => (
+          <Card key={metric.label}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-slate-500">{metric.label}</p>
+                <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">{metric.value}</p>
+                <p className="mt-2 text-sm text-slate-500">{metric.detail}</p>
+              </div>
+              <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${metric.accent}`}>
+                {metric.icon}
+              </div>
+            </div>
+          </Card>
+        ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
-        <Card className="shadow-blue-200">
-          <div className="p-6">
-            <h3 className="text-lg font-semibold mb-4 text-blue-600">Top Products by Quantity</h3>
-            <div className="h-80">
-              <ProductPerformanceChart data={productPerformanceData} />
-            </div>
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+        <Card title="Top Products by Quantity">
+          <div className="h-80">
+            <ProductPerformanceChart data={productPerformanceData} />
           </div>
         </Card>
 
-        <Card className="shadow-blue-200">
-          <div className="p-6">
-            <h3 className="text-lg font-semibold mb-4 text-blue-600">Recent Transactions</h3>
-            <div className="space-y-4">
+        <Card title="Recent Transactions">
+          {sales.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+              No transactions available in the current workspace.
+            </div>
+          ) : (
+            <div className="space-y-3">
               {sales.slice(0, 5).map((sale) => (
-                <div key={sale.id} className="flex justify-between items-center border-b border-blue-100 pb-2">
-                  <div>
-                    <p className="font-medium text-blue-900">{sale.customerName || 'Walk-in customer'}</p>
-                    <p className="text-sm text-blue-600">{format(new Date(sale.createdAt), 'MMM d, yyyy')}</p>
+                <div
+                  key={sale.id}
+                  className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 px-4 py-4"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-slate-900">{sale.customerName || 'Walk-in customer'}</p>
+                    <p className="mt-1 text-sm text-slate-500">{format(new Date(sale.createdAt), 'MMM d, yyyy')}</p>
                   </div>
-                  <p className="font-bold text-blue-900">{formatCurrency(sale.total)}</p>
+                  <p className="text-right text-lg font-semibold text-slate-900">{formatCurrency(sale.total)}</p>
                 </div>
               ))}
             </div>
-          </div>
+          )}
         </Card>
       </div>
     </div>

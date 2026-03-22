@@ -14,29 +14,29 @@ const Button: React.FC<ButtonProps> = ({
   className = '',
   ...props
 }) => {
-  const baseClasses = 'inline-flex items-center justify-center font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
-  
+  const baseClasses = 'inline-flex items-center justify-center gap-2 font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
+
   const variantClasses = {
-    primary: 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500',
-    secondary: 'bg-gray-200 hover:bg-gray-300 text-gray-800 focus:ring-gray-500 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600',
-    success: 'bg-green-600 hover:bg-green-700 text-white focus:ring-green-500',
-    danger: 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500',
-    warning: 'bg-yellow-500 hover:bg-yellow-600 text-white focus:ring-yellow-500',
-    ghost: 'bg-transparent hover:bg-gray-100 text-gray-800 dark:text-gray-200 dark:hover:bg-gray-700',
+    primary: 'border border-slate-900 bg-slate-900 text-white hover:bg-slate-800 focus:ring-slate-400',
+    secondary: 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 focus:ring-slate-300',
+    success: 'border border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-300',
+    danger: 'border border-red-600 bg-red-600 text-white hover:bg-red-700 focus:ring-red-300',
+    warning: 'border border-amber-500 bg-amber-500 text-slate-950 hover:bg-amber-400 focus:ring-amber-300',
+    ghost: 'border border-transparent bg-transparent text-slate-700 hover:bg-slate-100 focus:ring-slate-300',
   };
-  
+
   const sizeClasses = {
-    sm: 'text-xs px-2.5 py-1.5 rounded',
-    md: 'text-sm px-4 py-2 rounded-md',
-    lg: 'text-base px-6 py-3 rounded-lg',
+    sm: 'rounded-lg px-3 py-2 text-xs',
+    md: 'rounded-xl px-4 py-2.5 text-sm',
+    lg: 'rounded-2xl px-6 py-3 text-base',
   };
-  
+
   return (
     <button
       className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
       {...props}
     >
-      {icon && <span className="mr-2">{icon}</span>}
+      {icon && <span className="shrink-0">{icon}</span>}
       {children}
     </button>
   );
