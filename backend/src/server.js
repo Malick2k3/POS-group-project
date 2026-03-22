@@ -1,18 +1,24 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const fs = require('fs');
 const helmet = require('helmet');
+const path = require('path');
 const winston = require('winston');
+const { randomUUID } = require('crypto');
 const routes = require('./routes');
-const { testConnection } = require('./config/database');
+const { closePool, testConnection } = require('./config/database');
 
 dotenv.config();
 
 const app = express();
+const logDirectory = path.join(__dirname, '..', 'logs');
 const allowedOrigins = (process.env.CORS_ORIGIN || '')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
+
+fs.mkdirSync(logDirectory, { recursive: true });
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
@@ -21,8 +27,8 @@ const logger = winston.createLogger({
     winston.format.json()
   ),
   transports: [
-    new winston.transports.File({ filename: 'error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'combined.log' })
+    new winston.transports.File({ filename: path.join(logDirectory, 'error.log'), level: 'error' }),
+    new winston.transports.File({ filename: path.join(logDirectory, 'combined.log') })
   ]
 });
 
@@ -69,12 +75,28 @@ app.use(express.urlencoded({
 }));
 
 app.use((req, res, next) => {
-  logger.info('request', {
+  const startedAt = Date.now();
+  req.requestId = randomUUID();
+  res.setHeader('X-Request-Id', req.requestId);
+
+  logger.info('request_started', {
+    requestId: req.requestId,
     method: req.method,
     url: req.originalUrl,
     query: req.query,
     params: req.params
   });
+
+  res.on('finish', () => {
+    logger.info('request_completed', {
+      requestId: req.requestId,
+      method: req.method,
+      url: req.originalUrl,
+      statusCode: res.statusCode,
+      durationMs: Date.now() - startedAt
+    });
+  });
+
   next();
 });
 
@@ -132,23 +154,47 @@ app.use('/api', routes);
 app.use((req, res) => {
   res.status(404).json({
     status: 'error',
-    message: 'Resource not found'
+    message: 'Resource not found',
+    requestId: req.requestId
   });
 });
 
 app.use((err, req, res, next) => {
   logger.error('unhandled_error', {
+    requestId: req.requestId,
     message: err.message,
     stack: err.stack
   });
 
   res.status(500).json({
     status: 'error',
-    message: 'Something went wrong'
+    message: 'Something went wrong',
+    requestId: req.requestId
   });
 });
 
 const PORT = Number(process.env.PORT || 3000);
+let server;
+
+async function shutdown(signal) {
+  logger.info('shutdown_started', { signal });
+
+  if (server) {
+    await new Promise((resolve, reject) => {
+      server.close((error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        resolve();
+      });
+    });
+  }
+
+  await closePool();
+  logger.info('shutdown_completed', { signal });
+}
 
 async function startServer() {
   if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
@@ -157,8 +203,11 @@ async function startServer() {
 
   await testConnection();
 
-  app.listen(PORT, () => {
-    logger.info(`Modern POS API is running on port ${PORT}`);
+  server = app.listen(PORT, () => {
+    logger.info('server_started', {
+      port: PORT,
+      environment: process.env.NODE_ENV || 'development'
+    });
   });
 }
 
@@ -168,6 +217,22 @@ startServer().catch((error) => {
     stack: error.stack
   });
   process.exit(1);
+});
+
+['SIGINT', 'SIGTERM'].forEach((signal) => {
+  process.on(signal, async () => {
+    try {
+      await shutdown(signal);
+      process.exit(0);
+    } catch (error) {
+      logger.error('shutdown_error', {
+        signal,
+        message: error.message,
+        stack: error.stack
+      });
+      process.exit(1);
+    }
+  });
 });
 
 module.exports = app;

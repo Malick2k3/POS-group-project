@@ -21,8 +21,29 @@ async function testConnection() {
   connection.release();
 }
 
+async function getConnectionHealth() {
+  const startedAt = Date.now();
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.query('SELECT 1');
+    return {
+      status: 'ok',
+      latencyMs: Date.now() - startedAt
+    };
+  } finally {
+    connection.release();
+  }
+}
+
+async function closePool() {
+  await pool.end();
+}
+
 module.exports = {
   pool,
   testConnection,
+  getConnectionHealth,
+  closePool,
   databaseConfig
 };
