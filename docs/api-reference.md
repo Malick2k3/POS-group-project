@@ -2,6 +2,8 @@
 
 Base URL: `http://localhost:3000/api`
 
+This is a quick map of the API surface, not a full OpenAPI spec.
+
 ## Health
 
 - `GET /health`
@@ -12,7 +14,9 @@ Base URL: `http://localhost:3000/api`
 - `POST /auth/login`
   - Purpose: sign in with email and 4-digit PIN
 - `POST /auth/register`
-  - Purpose: create a POS user account
+  - Purpose: create the very first store admin during initial setup
+- `GET /auth/setup-status`
+  - Purpose: tell the frontend whether first-time registration is still open
 - `GET /auth/me`
   - Purpose: fetch the authenticated user
 
@@ -27,7 +31,7 @@ Base URL: `http://localhost:3000/api`
   - Purpose: fetch a user by id
   - Access: admin
 - `POST /users`
-  - Purpose: create a user
+  - Purpose: create a staff account after store setup is complete
   - Access: admin
 - `PUT /users/:id`
   - Purpose: update a user
@@ -71,7 +75,7 @@ Base URL: `http://localhost:3000/api`
 ## Sales
 
 - `POST /sales`
-  - Purpose: create a sale and adjust stock
+  - Purpose: create a sale and update stock
   - Access: admin, manager, cashier
 - `GET /sales`
   - Purpose: list sales
@@ -86,5 +90,6 @@ Base URL: `http://localhost:3000/api`
 ## Notes
 
 - Protected routes expect `Authorization: Bearer <token>`.
-- Write routes are validated before controller execution.
+- Write routes are validated before controller logic runs.
 - Authentication routes are rate-limited.
+- `POST /auth/register` is not a normal open signup route. It is only meant for first-time setup.
